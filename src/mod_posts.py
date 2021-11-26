@@ -125,6 +125,7 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
 
 
 def check_blacklisted_subs(reddit: praw.reddit.Reddit):
+    # sourcery skip: none-compare
     """Checks all blacklisted subs for new posts and bans the authors.
 
     Args:
@@ -135,8 +136,12 @@ def check_blacklisted_subs(reddit: praw.reddit.Reddit):
         
         if post is None:
             time.sleep(10)
-
-        flexible_ban(reddit, str(post.author))
+            continue
+        
+        try:
+            flexible_ban(reddit, str(post.author))
+        except Exception as e:
+            std.add_to_traceback(str(e))
 
 ###############################################
 # MAIN

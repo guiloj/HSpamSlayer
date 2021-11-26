@@ -55,10 +55,10 @@ def main():
         time.sleep(100)
         
         # * (@guiloj) checks if any of the scripts stopped unexpectedly
-        if (code := invites.pool()) != None:
+        if (code := invites.poll()) != None:
             std.add_to_traceback(f"({code}) an error occurred in accept_invites.py")
             fail += 1
-        if (code := posts.pool()) != None:
+        if (code := posts.poll()) != None:
             std.add_to_traceback(f"({code}) an error occurred in mod_posts.py")
             fail += 1
 
