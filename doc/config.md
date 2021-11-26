@@ -42,7 +42,7 @@
 **Warnings:**
 
 -   Made for a discord webhook.
--   Must add the webhook link to the [`../data/secrets.json`](https://github.com/guiloj/HSpamSlayer/blob/main/doc/secrets.md) file
+-   Must add the webhook link to the [`../data/secrets.json`](https://github.com/guiloj/HSpamSlayer/blob/master/doc/secrets.md) file
 
 ## "action"
 
