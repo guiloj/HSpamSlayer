@@ -1,14 +1,6 @@
-<style>
-
-.taiga {
-    height: 400px;
-    border-radius: 10px;
-}
-</style>
-
 # HSpamSlayer
 
-<a href="https://www.pixiv.net/en/artworks/59561246"><img class="taiga" src="https://cdn.discordapp.com/attachments/766913349442600971/913633329130115092/59561246_p0_master1200.png"><img></a>
+<a href="https://www.pixiv.net/en/artworks/59561246"><img style="height: 400px; border-radius: 10px;" class="taiga" src="https://cdn.discordapp.com/attachments/766913349442600971/913633329130115092/59561246_p0_master1200.png"><img></a>
 
 A simple bot to help keep spam away from your _H_ subreddit.
 
@@ -70,7 +62,10 @@ _(configuration changes are not changes)_
     cd HSpamSlayer
     ```
 
--   Create core config files
+-   Create core config directories and files
+    ```sh
+    mkdir data && mkdir config
+    ```
     ```sh
     echo "{ \
         \"username\": \"\", \n\
