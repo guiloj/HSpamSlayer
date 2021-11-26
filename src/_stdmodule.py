@@ -19,7 +19,6 @@ Standard module for all functions that are reused by multiple scripts.
 # IMPORTS
 ###############################################
 
-import os
 import praw.reddit
 import time
 import json
@@ -78,7 +77,7 @@ def send_to_webhook(data: dict) -> bool:
 
 # NOTE: this function needs to be very robust, it keeps the bot from getting banned from the api
 def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False ):
-    """Checks for rate limiting, if `left` < 10 then sleep for `reset_timestamp` - now.
+    """Checks for rate limiting, if `left` < 20 then sleep for `reset_timestamp` - now.
 
     Args:
         reddit (praw.reddit.Reddit): Reddit object from praw.
@@ -87,12 +86,14 @@ def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False ):
     limit: dict[str, int] = reddit.auth.limits
 
     if debug:
-        print(limit)
+        limit_left = limit
+        limit_left["left"] = limit["reset_timestamp"] - time.time()
+        print(limit_left)
 
-    if limit["remaining"] < 10:
-        # ? (@guilo) if time left until reset is smaller than 0 than it should not sleep.
+    if limit["remaining"] < 20:
+        # ? (@guiloj) if time left until reset is smaller than 0 than it should not sleep.
         if (timesleep := limit["reset_timestamp"] - time.time()) > 0:
-            # * (@guilo) the `:=` opperator assigns the expression on the left to the
+            # * (@guiloj) the `:=` opperator assigns the expression on the left to the
             # * identifier on the right if the `if` is `True`
             time.sleep(timesleep)
         return

@@ -57,7 +57,7 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
     """
     while True:
         for unread in reddit.inbox.unread(limit=None):
-            std.check_ratelimit(reddit)
+            std.check_ratelimit(reddit, True)
 
             if isinstance(unread, SubredditMessage):
                 try:

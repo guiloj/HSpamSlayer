@@ -22,8 +22,7 @@ Accepts all mod invites.
 import os
 import json
 import praw
-import praw.models
-from praw.models.reddit.subreddit import SubredditRedditorFlairTemplates 
+import praw.models 
 import _stdmodule as std
 import time 
 
@@ -82,7 +81,7 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
     options = ban_configs()
 
     try:
-        options["ban_message"].format("r/"+str(subreddit))
+        options["ban_message"] = options["ban_message"].format("r/"+str(subreddit))
     except:
         pass
 
@@ -118,21 +117,20 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
         if str(subreddit) == "u_" + cred["username"]:
             continue
 
-        std.check_ratelimit(reddit)
+        std.check_ratelimit(reddit, True)
 
         if not sub_banned(subreddit, user_name):
             ban_user(subreddit, user_name)
 
 
 def check_blacklisted_subs(reddit: praw.reddit.Reddit):
-    # sourcery skip: none-compare
     """Checks all blacklisted subs for new posts and bans the authors.
 
     Args:
         reddit (praw.reddit.Reddit): The reddit instance.
     """
     for post in reddit.subreddit("+".join(subs["banned_subs"])).stream.submissions(skip_existing=True, pause_after=10):
-        std.check_ratelimit(reddit)
+        std.check_ratelimit(reddit, True)
         
         if post is None:
             time.sleep(10)
