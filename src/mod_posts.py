@@ -87,7 +87,7 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
         pass
 
     try:
-        subreddit.banned.add("NAME", **ban_configs())
+        subreddit.banned.add(user_name, **options)
     except Exception as err:
         std.add_to_traceback(str(err))
 
@@ -137,7 +137,7 @@ def check_blacklisted_subs(reddit: praw.reddit.Reddit):
         if post is None:
             time.sleep(10)
             continue
-        
+
         try:
             flexible_ban(reddit, str(post.author))
         except Exception as e:
