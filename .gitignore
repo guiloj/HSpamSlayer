@@ -1,0 +1,5 @@
+config.json
+secrets.json
+subs.json
+__pycache__
+*swp
