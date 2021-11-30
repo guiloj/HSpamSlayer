@@ -44,6 +44,7 @@ with open("../config/config.json", "rt", encoding="utf-8") as f:
 
 # TODO: (@guiloj) add tests for all scripts
 # TODO: (@guiloj) add a cache for repetitive tasks
+# TODO: (@guiloj) fix all the [try, except, pass] statements
 
 def main():
     # * (@guiloj) starts both bot scripts simultaneously

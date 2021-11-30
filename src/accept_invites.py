@@ -22,6 +22,7 @@ Accepts all mod invites.
 import os
 import json
 import praw
+import praw.models
 import time
 import _stdmodule as std
 from praw.models import SubredditMessage
@@ -49,6 +50,36 @@ with open("../data/secrets.json") as f:
 # FUNCTIONS
 ###############################################
 
+def message_configs() -> dict:
+    """Grabs the message configs for a dynamic configuration process.
+
+    Returns:
+        dict: All of the configs to be used in **kwargs
+    """
+    with open("../config/config.json", "rt", encoding="utf-8") as f:
+        configs = json.loads(f.read())
+    
+    return configs["message"]
+
+def send_message(redditor: praw.models.Redditor, subreddit: praw.models.Subreddit) -> None:
+    """Sends a message to the mod that invited the bot as soon as a invite is accepted.
+
+    Args:
+        redditor (praw.models.Redditor): The redditor object for the mod.
+        subreddit (praw.models.Subreddit): The subreddit to format into the message.
+    """
+    options = message_configs()
+
+    try:
+        options["message"] = options["message"].format("r/"+str(subreddit))
+    except:
+        pass
+
+    try:
+        redditor.message(**options)
+    except Exception as e:
+        std.add_to_traceback(str(e))
+
 def auto_accept_invites(reddit: "praw.reddit.Reddit"):
     """Auto accepts all moderator invites.
 
@@ -57,14 +88,19 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
     """
     while True:
         for unread in reddit.inbox.unread(limit=None):
-            std.check_ratelimit(reddit, True)
+            std.check_ratelimit(reddit)
 
             if isinstance(unread, SubredditMessage):
                 try:
                     reddit.subreddit(str(unread.subreddit)).mod.accept_invite()
+                    send_message(unread.author, unread.subreddit)
                 except (praw.exceptions.RedditAPIException, prawcore.exceptions.NotFound):
                     # ? (@guiloj) if the invite is invalid the bot does not break
+                    unread.mark_read()
                     continue
+                
+                except Exception as e:
+                    std.add_to_traceback(e)
 
                 unread.mark_read()
         time.sleep(120)

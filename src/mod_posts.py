@@ -53,7 +53,7 @@ def ban_configs() -> dict:
     Returns:
         dict: All of the configs to be used in **kwargs.
     """
-    with open("../config/config.json") as f:
+    with open("../config/config.json", "rt", encoding="utf-8") as f:
         configs = json.loads(f.read())["action"]
 
     options = {}
@@ -90,22 +90,6 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
     except Exception as err:
         std.add_to_traceback(str(err))
 
-def sub_banned(subreddit: praw.models.Subreddit, user_name: str) -> bool:
-    """Checks if a given user was already banned from a subreddit, adds any error to `traceback.txt`.
-
-    Args:
-        subreddit (praw.models.Subreddit): The subreddit to be checked.
-        user_name (str): The user's name.
-
-    Returns:
-        bool: If the user was already banned or not.
-    """
-    try:
-        return any(str(banned) == user_name for banned in subreddit.banned())
-    except Exception as err:
-        std.add_to_traceback(str(err))
-        return False
-
 def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
     """Bans a user only if it was not banned beforehand.
 
@@ -117,10 +101,12 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
         if str(subreddit) == "u_" + cred["username"]:
             continue
 
-        std.check_ratelimit(reddit, True)
+        std.check_ratelimit(reddit)
 
-        if not sub_banned(subreddit, user_name):
+        try:
             ban_user(subreddit, user_name)
+        except Exception as e:
+            std.add_to_traceback(str(e))
 
 
 def check_blacklisted_subs(reddit: praw.reddit.Reddit):
@@ -130,7 +116,7 @@ def check_blacklisted_subs(reddit: praw.reddit.Reddit):
         reddit (praw.reddit.Reddit): The reddit instance.
     """
     for post in reddit.subreddit("+".join(subs["banned_subs"])).stream.submissions(skip_existing=True, pause_after=10):
-        std.check_ratelimit(reddit, True)
+        std.check_ratelimit(reddit)
         
         if post is None:
             time.sleep(10)

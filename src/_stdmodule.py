@@ -86,9 +86,12 @@ def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False ):
     limit: dict[str, int] = reddit.auth.limits
 
     if debug:
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+
         limit_left = limit
         limit_left["left"] = limit["reset_timestamp"] - time.time()
-        print(limit_left)
+        print(f"{calframe[1][3]}()\n{limit_left}\n")
 
     if limit["remaining"] < 20:
         # ? (@guiloj) if time left until reset is smaller than 0 than it should not sleep.

@@ -1,18 +1,5 @@
 # config/config.json
 
-```json
-{
-    "webhook": null,
-
-    "action": {
-        "ban_message": null,
-        "ban_reason": null,
-        "duration": null,
-        "note": null
-    }
-}
-```
-
 ## "webhook"
 
 **Why:** If anything goes wrong with `mod_posts.py` or `accept_invites.py` the `_stdmodule.send_to_webhook` function that is called in `main.py` is made to alert the user that something went wrong with scripts and that action must be taken.
@@ -46,9 +33,9 @@
 
 ## "action"
 
-**Type:** Dictionary
+**Type:** Dictionary<String, String|Integer>
 
-**What:** The ban configuration container
+**What:** The ban configuration container.
 
 ### "ban_message"
 
@@ -56,17 +43,18 @@
 
 **What:** A message that gets sent to a user when it gets banned by the bot.
 
-**Extra:** Add a `{}` where you want the name of the subreddit to be.
+**Extra:** Add a `{0}` where you want the name of the subreddit to be.
 
 **Example:**
 
 ```json
 {
     ...
-    "action":{
-        "ban_message": "Sorry for the ban from {} lmao.",
+    "action": {
+        "ban_message": "Sorry for the ban from {0} lmao.",
         ...
-    }
+    },
+    ...
 }
 ```
 
@@ -83,11 +71,12 @@
 ```json
 {
     ...
-    "action":{
+    "action": {
         ...
         "ban_reason":"spammer",
         ...
-    }
+    },
+    ...
 }
 ```
 
@@ -95,7 +84,7 @@
 
 **Type:** Integer
 
-**What:** The time a user should be banned for in days, goes from 1 to 999, `null` = permaban
+**What:** The time a user should be banned for in days, goes from 1 to 999, `null` = permaban.
 
 **Example:**
 
@@ -104,11 +93,12 @@
 ```json
 {
     ...
-    "action":{
+    "action": {
         ...
         "duration": 1,
         ...
-    }
+    },
+    ...
 }
 ```
 
@@ -117,11 +107,12 @@
 ```json
 {
     ...
-    "action":{
+    "action": {
         ...
         "duration": null,
         ...
-    }
+    },
+    ...
 }
 ```
 
@@ -136,9 +127,54 @@
 ```json
 {
     ...
-    "action":{
+    "action": {
         ...
         "note": "User is not, in fact, cool."
+    },
+    ...
+}
+```
+
+## "message"
+
+**Type:** Dictionary<String, String>
+
+**What:** The invite accept message config container.
+
+### "subject"
+
+**Type:** String
+
+**What:** The message subject.
+
+**Example:**
+
+```json
+{
+    ...
+    "message": {
+        "subject":"Invite Accepted!",
+        ...
+    }
+}
+```
+
+### "message"
+
+**Type:** String
+
+**What:** The message that is going to be sent to a mod that invited the bot.
+
+**Extra:** Add a `{0}` where you want the name of the subreddit to be.
+
+**Example:**
+
+```json
+{
+    ...
+    "message": {
+        ...
+        "message":"We accepted your invite to moderate {0}, enjoy!"
     }
 }
 ```

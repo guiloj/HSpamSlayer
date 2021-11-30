@@ -82,13 +82,17 @@ _(configuration changes are not changes)_
     }" >> ./data/subs.json
     ```
     ```sh
-    echo "{ \
+    echo "{ \n\
         \"webhook\": false, \n\
         \"action\": { \n\
             \"ban_message\": \"\", \n\
             \"ban_reason\": \"\", \n\
             \"duration\": null, \n\
             \"note\": \"\" \n\
+        }, \n\
+        \"message\": { \n\
+            \"subject\":\"\", \n\
+            \"message\":\"\" \n\
         } \n\
     }" >> ./config/config.json
     ```
