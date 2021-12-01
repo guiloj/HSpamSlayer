@@ -43,6 +43,9 @@ os.chdir(os.path.dirname(ABSPATH))
 with open("../data/secrets.json") as f:
     cred = json.loads(f.read())
 
+with open("../config/config.json", "rt", encoding="utf-8") as f:
+    configs = json.loads(f.read())
+
 ###############################################
 # CLASSES
 ###############################################
@@ -96,22 +99,24 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
             if isinstance(unread, SubredditMessage):
                 try:
                     reddit.subreddit(str(unread.subreddit)).mod.accept_invite()
-                    std.send_to_webhook(
-                        {
-                            "embeds":[
-                                {
-                                    "author": {
-                                        "name": "HSpamSlayer",
-                                        "url": "https://www.reddit.com/user/HSpamSlayer",
-                                        "icon_url": "https://styles.redditmedia.com/t5_5czm0s/styles/profileIcon_aaqhxf65yj081.jpeg?width=256&height=256&crop=256:256,smart&s=0709aa35f8ca40351ed717448529deba63cec82e",
-                                    },
-                                    "title": f"Invite from {unread.subreddit} accepted!",
-                                    "url":"https://www.reddit.com/"
-                                }
-                            ]
-                        },
-                        "2"
-                    )
+                    if configs["webhook"]:
+                        std.send_to_webhook(
+                            {
+                                "content":"<@235950285569130496>",
+                                "embeds":[
+                                    {
+                                        "author": {
+                                            "name": "HSpamSlayer",
+                                            "url": "https://www.reddit.com/user/HSpamSlayer",
+                                            "icon_url": "https://styles.redditmedia.com/t5_5czm0s/styles/profileIcon_aaqhxf65yj081.jpeg?width=256&height=256&crop=256:256,smart&s=0709aa35f8ca40351ed717448529deba63cec82e",
+                                        },
+                                        "title": f"Invite from {unread.subreddit} accepted!",
+                                        "url": f"https://www.reddit.com/r/{unread.subreddit}"
+                                    }
+                                ]
+                            },
+                            "2"
+                        )
                     send_message(unread.subreddit)
                 except (
                     praw.exceptions.RedditAPIException,
