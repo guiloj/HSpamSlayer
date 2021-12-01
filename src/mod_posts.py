@@ -21,10 +21,11 @@ Accepts all mod invites.
 
 import os
 import json
+from typing import Dict, List
 import praw
-import praw.models 
+import praw.models
 import _stdmodule as std
-import time 
+import time
 
 ###############################################
 # FILE MANAGEMENT
@@ -40,12 +41,10 @@ os.chdir(os.path.dirname(ABSPATH))
 with open("../data/secrets.json") as f:
     cred = json.loads(f.read())
 
-with open("../data/subs.json") as f:
-    subs = json.loads(f.read())
-
 ###############################################
 # FUNCTIONS
 ###############################################
+
 
 def ban_configs() -> dict:
     """Grabs the ban configs for a dynamic configuration process.
@@ -70,6 +69,30 @@ def ban_configs() -> dict:
 
     return options
 
+
+def get_banned_user_subs(user_name: str) -> Dict[str, str]:
+    with open("../cache/banned_users.cache.json") as f:
+        users = json.loads(f.read())["banned_users"]
+
+    return users.get(user_name, {})
+
+
+def add_to_banned_users(
+    subreddits: List[praw.models.Subreddit], user_name: str
+) -> None:
+    with open("../cache/banned_users.cache.json") as f:
+        current = json.loads(f.read())
+
+    if not current["banned_users"].get(user_name, False):
+        current["banned_users"][user_name] = {}
+
+    for sub in subreddits:
+        current["banned_users"][user_name][str(sub)] = str(sub)
+
+    with open("../cache/banned_users.cache.json", "wt") as f:
+        f.write(json.dumps(current, indent=4))
+
+
 def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
     """Bans a user from a subreddit, adds any error to `traceback.txt`.
 
@@ -81,14 +104,28 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
     options = ban_configs()
 
     try:
-        options["ban_message"] = options["ban_message"].format("r/"+str(subreddit))
+        options["ban_message"] = options["ban_message"].format("r/" + str(subreddit))
     except:
         pass
 
+    subreddit.banned.add(user_name, **options)
+
+
+def get_banned_subs() -> List[str]:
+    with open("../data/subs.json") as f:
+        subs = json.loads(f.read())["banned_subs"]
+    return subs
+
+
+def get_modded_subs() -> List[str]:
+    with open("../cache/moderated_subreddits.cache.json") as f:
+        subs = json.loads(f.read())
     try:
-        subreddit.banned.add(user_name, **options)
-    except Exception as err:
-        std.add_to_traceback(str(err))
+        return [x for x in subs["subreddits"] if str(x) != "u_" + cred["username"]]
+    except KeyError:
+        std.update_modded_subreddits()
+        return get_modded_subs()
+
 
 def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
     """Bans a user only if it was not banned beforehand.
@@ -97,39 +134,71 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
         reddit (praw.reddit.Reddit): The reddit instance.
         user_name (str): The user's name.
     """
+
+    user_banned = get_banned_user_subs(user_name)
+
+    subs_banned_in = []
+
+    # ? (@guiloj) we don't use the cache here because creating subs out of strings would be basically the same requests wise
     for subreddit in reddit.user.moderator_subreddits(limit=None):
         if str(subreddit) == "u_" + cred["username"]:
             continue
 
-        std.check_ratelimit(reddit)
+        if user_banned.get(str(subreddit), False):
+            continue
+
+        std.check_ratelimit(reddit, True)
 
         try:
             ban_user(subreddit, user_name)
+            subs_banned_in.append(subreddit)
         except Exception as e:
             std.add_to_traceback(str(e))
 
+    if len(subs_banned_in):
+        add_to_banned_users(subs_banned_in, user_name)
 
-def check_blacklisted_subs(reddit: praw.reddit.Reddit):
+
+def check_moderated_subs(reddit: praw.reddit.Reddit):
     """Checks all blacklisted subs for new posts and bans the authors.
 
     Args:
         reddit (praw.reddit.Reddit): The reddit instance.
     """
-    for post in reddit.subreddit("+".join(subs["banned_subs"])).stream.submissions(skip_existing=True, pause_after=10):
-        std.check_ratelimit(reddit)
-        
-        if post is None:
-            time.sleep(10)
-            continue
+    while 1:
+        modded = get_modded_subs()
+        for post in reddit.subreddit("+".join(modded)).stream.submissions(
+            skip_existing=True, pause_after=10  # skip_existing=True
+        ):
+            std.check_ratelimit(reddit, True)
+            if post is None:
+                time.sleep(10)
+                continue
 
-        try:
-            flexible_ban(reddit, str(post.author))
-        except Exception as e:
-            std.add_to_traceback(str(e))
+            if hasattr(post, "crosspost_parent"):
+                if (
+                    str(
+                        reddit.submission(post.crosspost_parent.split("_")[1]).subreddit
+                    )
+                    in get_banned_subs()
+                ):
+
+                    flexible_ban(reddit, str(post.author))
+                    try:
+                        post.delete()
+                    except Exception as e:
+                        std.add_to_traceback(e)
+
+                continue
+
+            if modded != get_modded_subs():
+                break
+
 
 ###############################################
 # MAIN
 ###############################################
+
 
 def main():
     reddit = praw.Reddit(
@@ -139,9 +208,9 @@ def main():
         user_agent=cred["agent"],
         username=cred["username"],
     )
-    check_blacklisted_subs(reddit)
+
+    check_moderated_subs(reddit)
 
 
 if __name__ == "__main__":
     main()
-

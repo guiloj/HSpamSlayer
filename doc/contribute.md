@@ -21,12 +21,7 @@
     """
     ```
 
--   You must always respect others.Name: Python Docstring Generator
-    Id: njpwerner.autodocstring
-    Description: Automatically generates detailed docstrings for python functions
-    Version: 0.5.4
-    Publisher: Nils Werner
-    VS Marketplace Link:
+-   You must always respect others.
 -   You must always make your functions [statically typed](https://docs.python.org/3/library/typing.html):
     ```py
     def foo(bar: str) -> str:
@@ -58,4 +53,7 @@
     -   [GitLens](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens)
     -   [BetterComments](https://marketplace.visualstudio.com/items?itemName=aaron-bond.better-comments)
     -   [AutoDocstring](https://marketplace.visualstudio.com/items?itemName=njpwerner.autodocstring)
+-   You are invited to use the `black` formatter.
+    -   `pip install black`|`pip3 install black`|`python3 -m pip install black`
+    -   `black .`
 -   You must NOT intentionally break the code.

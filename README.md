@@ -13,7 +13,7 @@ A simple bot to help keep spam away from your _H_ subreddit.
 
 # About
 
-HSpamSlayer is a bot that is programmed to stream posts from blacklisted subreddits and ban the author in every subreddit it moderates.
+HSpamSlayer is a bot that is programmed to stream posts from modded subreddits and ban the author of a crosspost that comes from a blacklisted subreddit in every subreddit it moderates.
 
 It was made to handle the current crosspost spam in many subreddits where a bot would get a random post from sub _A_ and submit it to its own subreddit with the same title and then crosspost it back to sub _A_.
 
@@ -25,7 +25,8 @@ To stop this HSpamSlayer has a blacklist of carefully selected subreddits to ban
 
 -   Invite https://www.reddit.com/user/HSpamSlayer to be a mod on your sub!
 -   Wait about 2 minutes for the bot to accept the invite
--   Make sure the bot has the `Manage Users` permission, otherwise the bot will not be able to work properly
+-   Make sure the bot has the `Manage Users`, `Manage Posts & Comments` and `Manage Mod Mail` permissions, otherwise the bot will not be able to work properly
+-   Also check if AutoMod is not deleting these posts automatically, if it is the bot would not work on your sub
 -   Sit down and enjoy the free spam firewall
 
 # Installation
@@ -64,37 +65,7 @@ _(configuration changes are not changes)_
 
 -   Create core config directories and files
     ```sh
-    mkdir data && mkdir config
-    ```
-    ```sh
-    echo "{ \
-        \"username\": \"\", \n\
-        \"password\": \"\", \n\
-        \"secret\": \"\", \n\
-        \"id\": \"\", \n\
-        \"agent\": \"\", \n\
-        \"webhook\": \"\" \n\
-    }" >> ./data/secrets.json
-    ```
-    ```sh
-    echo "{ \
-        \"banned_subs\": [] \n\
-    }" >> ./data/subs.json
-    ```
-    ```sh
-    echo "{ \n\
-        \"webhook\": false, \n\
-        \"action\": { \n\
-            \"ban_message\": \"\", \n\
-            \"ban_reason\": \"\", \n\
-            \"duration\": null, \n\
-            \"note\": \"\" \n\
-        }, \n\
-        \"message\": { \n\
-            \"subject\":\"\", \n\
-            \"message\":\"\" \n\
-        } \n\
-    }" >> ./config/config.json
+    bash setup.sh
     ```
 -   Configure the bot
     -   [Configure the config file -> ./config/config.json](https://github.com/guiloj/HSpamSlayer/blob/master/doc/config.md)

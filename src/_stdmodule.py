@@ -75,8 +75,9 @@ def send_to_webhook(data: dict) -> bool:
     )
     return response.ok
 
+
 # NOTE: this function needs to be very robust, it keeps the bot from getting banned from the api
-def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False ):
+def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False):
     """Checks for rate limiting, if `left` < 20 then sleep for `reset_timestamp` - now.
 
     Args:
@@ -100,3 +101,19 @@ def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False ):
             # * identifier on the right if the `if` is `True`
             time.sleep(timesleep)
         return
+
+
+def update_modded_subreddits(reddit: praw.reddit.Reddit) -> None:
+    """Updates the cache of modded subreddits to avoid unnecessary requests.
+
+    Args:
+        reddit (praw.reddit.Reddit): The Reddit instance.
+    """
+    mod_dict = [str(x) for x in reddit.user.moderator_subreddits(limit=None)]
+    with open("../cache/moderated_subreddits.cache.json") as f:
+        mod_subs = json.loads(f.read())
+
+    mod_subs["subreddits"] = mod_dict
+
+    with open("../cache/moderated_subreddits.cache.json", "wt") as f:
+        f.write(json.dumps(mod_subs, indent=4))

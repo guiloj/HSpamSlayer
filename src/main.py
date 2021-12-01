@@ -46,6 +46,7 @@ with open("../config/config.json", "rt", encoding="utf-8") as f:
 # TODO: (@guiloj) add a cache for repetitive tasks
 # TODO: (@guiloj) fix all the [try, except, pass] statements
 
+
 def main():
     # * (@guiloj) starts both bot scripts simultaneously
     invites = Popen(["python3", "accept_invites.py"])
@@ -54,7 +55,7 @@ def main():
     while 1:
         fail = 0
         time.sleep(100)
-        
+
         # * (@guiloj) checks if any of the scripts stopped unexpectedly
         if (code := invites.poll()) != None:
             std.add_to_traceback(f"({code}) an error occurred in accept_invites.py")
@@ -84,6 +85,7 @@ def main():
                     ],
                 }
             )
+            fail -= 1
 
 
 if __name__ == "__main__":

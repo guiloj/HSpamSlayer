@@ -1,6 +1,6 @@
-config.json
-secrets.json
-subs.json
+config
+data
+cache
 __pycache__
 *swp
 traceback.txt
