@@ -58,7 +58,7 @@ def add_to_traceback(message: str) -> None:
     return
 
 
-def send_to_webhook(data: dict) -> bool:
+def send_to_webhook(data: dict, use_alt:str ="") -> bool:
     """Sends dict data as json to the discord webhook.
 
     Args:
@@ -68,7 +68,7 @@ def send_to_webhook(data: dict) -> bool:
         bool: True if response is ok False if not.
     """
     with open("../data/secrets.json", "rt", encoding="utf-8") as f:
-        webhook = json.loads(f.read())["webhook"]
+        webhook = json.loads(f.read())["webhook" + use_alt]
     response = requests.post(
         webhook,
         json=data,
