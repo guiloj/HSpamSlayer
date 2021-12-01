@@ -185,7 +185,7 @@ def check_moderated_subs(reddit: praw.reddit.Reddit):
 
                     flexible_ban(reddit, str(post.author))
                     try:
-                        post.delete()
+                        post.mod.remove()
                     except Exception as e:
                         std.add_to_traceback(e)
 
