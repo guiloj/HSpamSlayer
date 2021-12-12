@@ -58,7 +58,7 @@ def add_to_traceback(message: str) -> None:
     return
 
 
-def send_to_webhook(data: dict, use_alt:str ="") -> bool:
+def send_to_webhook(data: dict, use_alt: str = "") -> bool:
     """Sends dict data as json to the discord webhook.
 
     Args:

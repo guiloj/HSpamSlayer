@@ -102,8 +102,8 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
                     if configs["webhook"]:
                         std.send_to_webhook(
                             {
-                                "content":"<@235950285569130496>",
-                                "embeds":[
+                                "content": "<@235950285569130496>",
+                                "embeds": [
                                     {
                                         "author": {
                                             "name": "HSpamSlayer",
@@ -111,11 +111,11 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
                                             "icon_url": "https://styles.redditmedia.com/t5_5czm0s/styles/profileIcon_aaqhxf65yj081.jpeg?width=256&height=256&crop=256:256,smart&s=0709aa35f8ca40351ed717448529deba63cec82e",
                                         },
                                         "title": f"Invite from {unread.subreddit} accepted!",
-                                        "url": f"https://www.reddit.com/r/{unread.subreddit}"
+                                        "url": f"https://www.reddit.com/r/{unread.subreddit}",
                                     }
-                                ]
+                                ],
                             },
-                            "2"
+                            "2",
                         )
                     send_message(unread.subreddit)
                 except (
@@ -129,7 +129,7 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
 
                 except Exception as e:
                     std.add_to_traceback(str(e))
-                unread.mark_read()
+            unread.mark_read()
 
         # ? (@guiloj) update the modded subreddits every two minutes and after any invite accept.
         std.update_modded_subreddits(reddit)

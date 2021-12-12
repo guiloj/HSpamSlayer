@@ -127,6 +127,27 @@ def get_modded_subs() -> List[str]:
         return get_modded_subs()
 
 
+def remove_config() -> dict:
+    with open("../config/config.json", "rt", encoding="utf-8") as f:
+        configs = json.loads(f.read())["remove"]  # TODO: (@guiloj) document changes.
+
+    return configs
+
+
+def remove_submission(submission: praw.reddit.Submission) -> None:
+    """Removes a submission and sends a removal message.
+
+    Args:
+        submission (praw.reddit.Submission): The submission to be removed.
+    """
+    configs = remove_config()
+    try:
+        submission.mod.remove()
+        submission.mod.send_removal_message(**configs)
+    except Exception as e:
+        std.add_to_traceback(e)
+
+
 def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
     """Bans a user only if it was not banned beforehand.
 
@@ -176,18 +197,12 @@ def check_moderated_subs(reddit: praw.reddit.Reddit):
                 continue
 
             if hasattr(post, "crosspost_parent"):
-                if (
-                    str(
-                        reddit.submission(post.crosspost_parent.split("_")[1]).subreddit
-                    )
-                    in get_banned_subs()
-                ):
+                parent = reddit.submission(post.crosspost_parent.split("_")[1])
+                if str(parent.subreddit) in get_banned_subs():
+                    if post.author == parent.author:
+                        flexible_ban(reddit, str(post.author))
 
-                    flexible_ban(reddit, str(post.author))
-                    try:
-                        post.mod.remove()
-                    except Exception as e:
-                        std.add_to_traceback(e)
+                    remove_submission(post)
 
                 continue
 
