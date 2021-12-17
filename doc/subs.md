@@ -8,10 +8,10 @@
 
 **Example:**
 
-> ban all new authors from r/devs and r/learnpython
+> ban all new authors from r/redditdev and r/learnpython
 
 ```json
 {
-    "banned_subs": ["devs", "learnpython"]
+    "banned_subs": ["redditdev", "learnpython"]
 }
 ```

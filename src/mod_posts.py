@@ -26,6 +26,7 @@ import praw
 import praw.models
 import _stdmodule as std
 import time
+import threading
 
 ###############################################
 # FILE MANAGEMENT
@@ -129,7 +130,7 @@ def get_modded_subs() -> List[str]:
 
 def remove_config() -> dict:
     with open("../config/config.json", "rt", encoding="utf-8") as f:
-        configs = json.loads(f.read())["remove"]  # TODO: (@guiloj) document changes.
+        configs = json.loads(f.read())["remove"]
 
     return configs
 
@@ -176,6 +177,8 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
         except Exception as e:
             std.add_to_traceback(str(e))
 
+        time.sleep(2)
+
     if len(subs_banned_in):
         add_to_banned_users(subs_banned_in, user_name)
 
@@ -200,7 +203,16 @@ def check_moderated_subs(reddit: praw.reddit.Reddit):
                 parent = reddit.submission(post.crosspost_parent.split("_")[1])
                 if str(parent.subreddit) in get_banned_subs():
                     if post.author == parent.author:
-                        flexible_ban(reddit, str(post.author))
+                        alt_reddit = praw.Reddit(
+                            client_id=cred["id"],
+                            client_secret=cred["secret"],
+                            password=cred["password"],
+                            user_agent=cred["agent"],
+                            username=cred["username"],
+                        )
+                        threading.Thread(
+                            target=flexible_ban, args=(alt_reddit, str(post.author))
+                        ).start()
 
                     remove_submission(post)
 

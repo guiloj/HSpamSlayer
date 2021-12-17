@@ -12,8 +12,7 @@
 
 ```json
 {
-    "webhook": true,
-    ...
+    "webhook": true
 }
 ```
 
@@ -21,7 +20,6 @@
 
 ```json
 {
-    ...
     "webhook": "https://discord.com/api/webhooks/000000000000000000/00000000000000000000000000000000000000000000000000000000000000000000"
 }
 ```
@@ -49,12 +47,9 @@
 
 ```json
 {
-    ...
     "action": {
-        "ban_message": "Sorry for the ban from {0} lmao.",
-        ...
-    },
-    ...
+        "ban_message": "Sorry for the ban from {0} lmao."
+    }
 }
 ```
 
@@ -70,13 +65,9 @@
 
 ```json
 {
-    ...
     "action": {
-        ...
-        "ban_reason":"spammer",
-        ...
-    },
-    ...
+        "ban_reason": "spammer"
+    }
 }
 ```
 
@@ -92,13 +83,9 @@
 
 ```json
 {
-    ...
     "action": {
-        ...
-        "duration": 1,
-        ...
-    },
-    ...
+        "duration": 1
+    }
 }
 ```
 
@@ -106,13 +93,9 @@
 
 ```json
 {
-    ...
     "action": {
-        ...
-        "duration": null,
-        ...
-    },
-    ...
+        "duration": null
+    }
 }
 ```
 
@@ -126,12 +109,9 @@
 
 ```json
 {
-    ...
     "action": {
-        ...
         "note": "User is not, in fact, cool."
-    },
-    ...
+    }
 }
 ```
 
@@ -151,10 +131,8 @@
 
 ```json
 {
-    ...
     "message": {
-        "subject":"Invite Accepted!",
-        ...
+        "subject": "Invite Accepted!"
     }
 }
 ```
@@ -171,10 +149,48 @@
 
 ```json
 {
-    ...
     "message": {
-        ...
-        "message":"We accepted your invite to moderate {0}, enjoy!"
+        "message": "We accepted your invite to moderate {0}, enjoy!"
     }
 }
 ```
+
+## "remove"
+
+**Type:** Dictionary<String, String>
+
+**What:** The remove post config container.
+
+### "message"
+
+**Type:** String
+
+**What:** The message sent to the user.
+
+**Example:**
+
+```json
+{
+    "remove": {
+        "message": "got your post removed lmao"
+    }
+}
+```
+
+### "type"
+
+**Type:** String
+
+**What:** The type of remove that should be done.
+
+**Example:**
+
+```json
+{
+    "remove": {
+        "type": "public"
+    }
+}
+```
+
+### [read more...](https://praw.readthedocs.io/en/stable/code_overview/other/submissionmoderation.html#praw.models.reddit.submission.SubmissionModeration.send_removal_message)

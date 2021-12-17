@@ -21,10 +21,8 @@
 
     ```json
     {
-        ...
         "secret": "",
-        "id": "",
-        ...
+        "id": ""
     }
     ```
 
@@ -33,8 +31,7 @@
     ```json
     {
         "username": "",
-        "password": "",
-        ...
+        "password": ""
     }
     ```
 
@@ -42,18 +39,14 @@
 
     ```json
     {
-        ...
-        "agent": "",
-        ...
+        "agent": ""
     }
-
     ```
 
 -   Add a webhook url **(Optional)**
 
     ```json
     {
-        ...
         "webhook": ""
     }
     ```
