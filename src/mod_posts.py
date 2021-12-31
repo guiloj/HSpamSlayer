@@ -21,12 +21,15 @@ Accepts all mod invites.
 
 import os
 import json
-from typing import Dict, List
+import queue
+from typing import Any, Callable, Dict, List, Tuple
 import praw
 import praw.models
+import prawcore
 import _stdmodule as std
 import time
 import threading
+import uuid
 
 ###############################################
 # FILE MANAGEMENT
@@ -38,9 +41,16 @@ import threading
 ABSPATH = os.path.abspath(__file__)
 os.chdir(os.path.dirname(ABSPATH))
 
-# * (@guiloj) get app secrets from the `../data/secrets.json` file
-with open("../data/secrets.json") as f:
-    cred = json.loads(f.read())
+###############################################
+# CLASSES
+###############################################
+class StreamThread(threading.Thread):
+    def __init__(
+        self, target: Callable[[Any], Any], args: "List | Tuple", id_: uuid.UUID
+    ):
+        super().__init__(target=target, args=args)
+        self.id = id_
+
 
 ###############################################
 # FUNCTIONS
@@ -56,19 +66,7 @@ def ban_configs() -> dict:
     with open("../config/config.json", "rt", encoding="utf-8") as f:
         configs = json.loads(f.read())["action"]
 
-    options = {}
-
-    for conf in ("ban_message", "ban_reason", "note", "duration"):
-
-        try:
-            if configs[conf] in ("", None):
-                continue
-        except KeyError:
-            continue
-
-        options[conf] = configs[conf]
-
-    return options
+    return configs
 
 
 def get_banned_user_subs(user_name: str) -> Dict[str, str]:
@@ -115,14 +113,18 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
 def get_banned_subs() -> List[str]:
     with open("../data/subs.json") as f:
         subs = json.loads(f.read())["banned_subs"]
-    return subs
+    return [x.lower() for x in subs]
 
 
 def get_modded_subs() -> List[str]:
     with open("../cache/moderated_subreddits.cache.json") as f:
         subs = json.loads(f.read())
     try:
-        return [x for x in subs["subreddits"] if str(x) != "u_" + cred["username"]]
+        return [
+            x.lower()
+            for x in subs["subreddits"]
+            if str(x).lower() != "u_" + std.username.lower()
+        ]
     except KeyError:
         std.update_modded_subreddits()
         return get_modded_subs()
@@ -163,7 +165,8 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
 
     # ? (@guiloj) we don't use the cache here because creating subs out of strings would be basically the same requests wise
     for subreddit in reddit.user.moderator_subreddits(limit=None):
-        if str(subreddit) == "u_" + cred["username"]:
+        subreddit: praw.models.Subreddit
+        if str(subreddit).lower() == "u_" + std.username.lower():
             continue
 
         if user_banned.get(str(subreddit), False):
@@ -173,6 +176,9 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
 
         try:
             ban_user(subreddit, user_name)
+            std.logger.info(
+                f"User https://www.reddit.com/u/{user_name} banned in https://www.reddit.com/r/{subreddit}"
+            )
             subs_banned_in.append(subreddit)
         except Exception as e:
             std.add_to_traceback(str(e))
@@ -183,43 +189,159 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
         add_to_banned_users(subs_banned_in, user_name)
 
 
-def check_moderated_subs(reddit: praw.reddit.Reddit):
+def check_moderated_subs(
+    id_: uuid.UUID, subs_dict: Dict[uuid.UUID, List[str]], errors_queue: queue.Queue
+):
     """Checks all blacklisted subs for new posts and bans the authors.
 
     Args:
         reddit (praw.reddit.Reddit): The reddit instance.
     """
+    try:
+        reddit = std.gen_reddit_instance()
+        while 1:
+            modded = subs_dict[id_]
+            post_stream = reddit.subreddit("+".join(modded)).stream.submissions(
+                skip_existing=True, pause_after=10  # skip_existing=True
+            )
+
+            for post in post_stream:
+                std.check_ratelimit(reddit, True)
+                if post is None:
+                    time.sleep(10)
+                    continue
+
+                if hasattr(post, "crosspost_parent"):
+                    parent = reddit.submission(post.crosspost_parent.split("_")[1])
+                    if str(parent.subreddit).lower() in get_banned_subs():
+                        std.logger.info(f"Bad crosspost found: {post.permalink}")
+                        if post.author == parent.author:
+                            threading.Thread(
+                                target=flexible_ban,
+                                args=(std.gen_reddit_instance(), str(post.author)),
+                            ).start()
+
+                        remove_submission(post)
+
+                    continue
+
+                if modded != subs_dict[id_]:
+                    break
+
+    except prawcore.exceptions.ServerError as e:
+        std.add_to_traceback("Reddit API is down: " + str(e))
+        time.sleep(60)
+    except prawcore.exceptions.Forbidden as e:
+        std.logger.critical(str(e))
+        time.sleep(60)
+    except Exception as e:
+        errors_queue.put(e)
+        return
+
+
+def generate_safe_id(is_in) -> uuid.UUID:
+    _id = uuid.uuid4()
+    while _id in is_in:
+        _id = uuid.uuid4()
+    return _id
+
+
+def list_diff(list_: list, other: list):
+    """Difference between two lists.
+
+    Args:
+        list_ (list): list number 1
+        other (list): list number 2
+
+    Returns:
+        Tuple[list]: Difference between the two lists. `[0]` == `list_` - `other`, `[1]` == `other` - `list_`
+    """
+    return ([x for x in list_ if x not in other], [x for x in other if x not in list_])
+
+
+def mk_mod_stream(
+    subs: list, threads_dict: Dict[str, List[str]], errors_queue: queue.Queue
+) -> StreamThread:
+    id_ = generate_safe_id(threads_dict)
+    stream = StreamThread(check_moderated_subs, (id_, threads_dict, errors_queue), id_)
+    threads_dict[id_] = subs
+    stream.start()
+    return stream
+
+
+def fill_thread(new: list, filled: int):
+    return (
+        [x for idx, x in enumerate(new) if idx < std.LIMIT - filled],
+        [x for idx, x in enumerate(new) if idx >= std.LIMIT - filled],
+    )
+
+
+def split_sub_list(subs: list):
+    return [subs[x : x + std.LIMIT] for x in range(0, len(subs), std.LIMIT)]
+
+
+def gen_mod_streams():  # sourcery no-metrics
+    modded_subs = get_modded_subs()
+    errors_queue = queue.Queue()
+    threads_dict = {}
+
+    running_threads = [
+        mk_mod_stream(sub_list, threads_dict, errors_queue)
+        for sub_list in split_sub_list(modded_subs)
+    ]
+    std.logger.info(f"Threads created: {len(running_threads)}")
+
     while 1:
-        modded = get_modded_subs()
-        for post in reddit.subreddit("+".join(modded)).stream.submissions(
-            skip_existing=True, pause_after=10  # skip_existing=True
-        ):
-            std.check_ratelimit(reddit, True)
-            if post is None:
-                time.sleep(10)
-                continue
+        time.sleep(120)
+        updated_modded_subs = get_modded_subs()
+        std.logger.debug(
+            f"Updated modded list: [{len(modded_subs)} => {len(updated_modded_subs)}]"
+        )
 
-            if hasattr(post, "crosspost_parent"):
-                parent = reddit.submission(post.crosspost_parent.split("_")[1])
-                if str(parent.subreddit) in get_banned_subs():
-                    if post.author == parent.author:
-                        alt_reddit = praw.Reddit(
-                            client_id=cred["id"],
-                            client_secret=cred["secret"],
-                            password=cred["password"],
-                            user_agent=cred["agent"],
-                            username=cred["username"],
-                        )
-                        threading.Thread(
-                            target=flexible_ban, args=(alt_reddit, str(post.author))
-                        ).start()
+        modded_diff = list_diff(modded_subs, updated_modded_subs)
 
-                    remove_submission(post)
+        if len(modded_diff[0]):  # subs we stopped modding
+            std.logger.info(f"Stopped modding: {modded_diff[0]}")
+            for thread in running_threads:
+                for idx, sub in enumerate(modded_diff[0]):
+                    if sub in threads_dict[thread.id]:
+                        threads_dict[thread.id].pop(idx)
 
-                continue
+        if len(modded_diff[1]):  # subs we started modding
+            std.logger.info(f"Started modding: {modded_diff[1]}")
+            to_add = modded_diff[1]
 
-            if modded != get_modded_subs():
-                break
+            for thread in running_threads:
+                if (length := len(threads_dict[thread.id])) < std.LIMIT:
+                    fill_add = fill_thread(to_add, length)
+                    threads_dict[thread.id] += fill_add[0]
+                    to_add = fill_add[1]
+                if not len(to_add):
+                    break
+
+            if len(to_add):
+                for sub_list in split_sub_list(to_add):
+                    running_threads.append(
+                        mk_mod_stream(sub_list, threads_dict, errors_queue)
+                    )
+                std.logger.info(f"Threads created: {len(to_add)}")
+
+        if not errors_queue.empty:
+            error = errors_queue.get()
+            std.logger.critical(error)
+            raise error
+
+        killed = 0
+        for idx, thread in enumerate(running_threads):
+            if not thread.is_alive():
+                killed += 1
+                running_threads.pop(idx)
+
+        if killed:
+            std.logger.info(f"Threads killed: {killed}")
+            killed = 0
+
+        modded_subs = updated_modded_subs
 
 
 ###############################################
@@ -228,15 +350,7 @@ def check_moderated_subs(reddit: praw.reddit.Reddit):
 
 
 def main():
-    reddit = praw.Reddit(
-        client_id=cred["id"],
-        client_secret=cred["secret"],
-        password=cred["password"],
-        user_agent=cred["agent"],
-        username=cred["username"],
-    )
-
-    check_moderated_subs(reddit)
+    gen_mod_streams()
 
 
 if __name__ == "__main__":

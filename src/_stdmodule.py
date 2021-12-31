@@ -19,12 +19,88 @@ Standard module for all functions that are reused by multiple scripts.
 # IMPORTS
 ###############################################
 
-import praw.reddit
+from typing import Any, List
+import praw
 import time
 import json
 import datetime
 import requests
 import inspect
+import os
+import logging
+
+###############################################
+# FILE MANAGEMENT
+###############################################
+
+# ? (@guiloj) correctly finds the path to the main.py file to
+# ? manage the modules and libs
+
+ABSPATH = os.path.abspath(__file__)
+os.chdir(os.path.dirname(ABSPATH))
+
+# * (@guiloj) get app secrets from the `../data/secrets.json` file
+with open("../data/secrets.json") as f:
+    cred = json.loads(f.read())
+
+###############################################
+# GLOBALS
+##############################################
+
+client_id: str = cred["id"]
+client_secret: str = cred["secret"]
+password: str = cred["password"]
+user_agent: str = cred["agent"]
+username: str = cred["username"]
+logger: logging.Logger
+LIMIT = 10
+
+###############################################
+# CLASSES
+##############################################
+
+# https://stackoverflow.com/a/56944256 < (@guiloj) credit is important kids
+class CustomFormatter(logging.Formatter):
+
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    )
+
+    FORMATS = {
+        logging.DEBUG: grey + format + reset,
+        logging.INFO: grey + format + reset,
+        logging.WARNING: yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset,
+        "NORMAL": format,
+    }
+
+    def format(self, record):
+        log_fmt = (
+            self.FORMATS.get(record.levelno)
+            if os.name != "nt"
+            else self.FORMATS.get("NORMAL")
+        )
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
+# create logger with 'spam_application'
+logger = logging.getLogger(username)
+logger.setLevel(logging.DEBUG)
+
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+ch.setFormatter(CustomFormatter())
+
+logger.addHandler(ch)
 
 ###############################################
 # FUNCTIONS
@@ -55,7 +131,14 @@ def add_to_traceback(message: str) -> None:
             + message
             + "\n\n"
         )
+    logger.error(message)
     return
+
+
+def config(config: str) -> Any:
+    with open("../config/config.json", "rt", encoding="utf-8") as f:
+        configs = json.loads(f.read())[config]
+    return configs
 
 
 def send_to_webhook(data: dict, use_alt: str = "") -> bool:
@@ -90,9 +173,9 @@ def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False):
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
 
-        limit_left = limit
-        limit_left["left"] = limit["reset_timestamp"] - time.time()
-        print(f"{calframe[1][3]}()\n{limit_left}\n")
+        requests_left = limit["remaining"]
+        time_left = limit["reset_timestamp"] - time.time()
+        logger.debug(f"{calframe[1][3]}() => {requests_left}, {int(time_left)}s")
 
     if limit["remaining"] < 20:
         # ? (@guiloj) if time left until reset is smaller than 0 than it should not sleep.
@@ -101,6 +184,18 @@ def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False):
             # * identifier on the right if the `if` is `True`
             time.sleep(timesleep)
         return
+
+
+def gen_reddit_instance() -> praw.Reddit:
+    reddit = praw.Reddit(
+        client_id=client_id,
+        client_secret=client_secret,
+        password=password,
+        user_agent=user_agent,
+        username=username,
+    )
+    reddit.validate_on_submit = True
+    return reddit
 
 
 def update_modded_subreddits(reddit: praw.reddit.Reddit) -> None:
