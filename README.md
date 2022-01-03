@@ -29,6 +29,12 @@ To stop this HSpamSlayer has a blacklist of carefully selected subreddits to ban
 -   Also check if AutoMod is not deleting these posts automatically, if it is the bot would not work on your sub
 -   Sit down and enjoy the free spam firewall
 
+## IMPORTANT
+
+-   The bot will be making a pinned announcement on your subreddit once the invite is accepted. If you don't like this you can remove the post as soon as it's posted, the bot will still work on your sub.
+
+-   You would need to accept that the bot's maintainers would modify the bot without making specific announcements. This is so that the bot can timely respond to spammers by updating its filters without having to run sub-specific versions. If you would like to become a bot maintainer and have a say on the bot's operation, please join our [Discord server](https://discord.gg/GCCPARFf5r).
+
 # Installation
 
 > If you want to run the bot and change the configurations for yourself
