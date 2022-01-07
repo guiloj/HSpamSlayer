@@ -113,6 +113,7 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
                         in [x.lower() for x in std.config("no_invite")]
                         + std.banned_subs()
                     ):
+                        unread.mark_read()
                         continue
 
                     try:
