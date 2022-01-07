@@ -25,6 +25,21 @@
 -   You must always make your functions [statically typed](https://docs.python.org/3/library/typing.html):
     ```py
     def foo(bar: str) -> str:
+        """
+        Add the string `bar` to the end of the string "foo: " and return it.
+
+        Args:
+            bar (str): The string to be appended.
+
+        Returns:
+            str: Result of the appended string.
+
+        Example:
+        ```py
+        >>> foo("bar")
+        foo: bar
+        ```
+        """
         return f'foo: {bar}'
     ```
 -   You should try your best to write readable code.

@@ -71,7 +71,7 @@ _(configuration changes are not changes)_
 
 -   Create core config directories and files
     ```sh
-    bash setup.sh
+    python3 setup.py
     ```
 -   Configure the bot
     -   [Configure the config file -> ./config/config.json](https://github.com/guiloj/HSpamSlayer/blob/master/doc/config.md)

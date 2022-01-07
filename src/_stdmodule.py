@@ -19,7 +19,8 @@ Standard module for all functions that are reused by multiple scripts.
 # IMPORTS
 ###############################################
 
-from typing import Any, List
+import sys
+from typing import Any, Dict, List
 import praw
 import time
 import json
@@ -28,6 +29,7 @@ import requests
 import inspect
 import os
 import logging
+from pathlib import Path
 
 ###############################################
 # FILE MANAGEMENT
@@ -40,7 +42,7 @@ ABSPATH = os.path.abspath(__file__)
 os.chdir(os.path.dirname(ABSPATH))
 
 # * (@guiloj) get app secrets from the `../data/secrets.json` file
-with open("../data/secrets.json") as f:
+with open(Path("../data/secrets.json")) as f:
     cred = json.loads(f.read())
 
 ###############################################
@@ -95,7 +97,7 @@ logger = logging.getLogger(username)
 logger.setLevel(logging.DEBUG)
 
 # create console handler with a higher log level
-ch = logging.StreamHandler()
+ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
 
 ch.setFormatter(CustomFormatter())
@@ -105,6 +107,20 @@ logger.addHandler(ch)
 ###############################################
 # FUNCTIONS
 ###############################################
+
+
+def format_webhook(webhook: Dict[str, "str | bool | list"], **kwargs) -> dict:
+    """Format every string inside a webhook dict.
+
+    Args:
+        webhook (Dict[str, "str | bool | list"]): The webhook dict.
+
+    Returns:
+        dict: Formatted dict.
+    """
+    # XXX: I'm so sorry
+    return json.loads(json.dumps(webhook) % kwargs)
+    # so so sorry
 
 
 def add_to_traceback(message: str) -> None:
@@ -125,7 +141,7 @@ def add_to_traceback(message: str) -> None:
     curframe = inspect.currentframe()
     calframe = inspect.getouterframes(curframe, 2)
 
-    with open("../traceback.txt", "at", encoding="utf-8") as f:
+    with open(Path("../traceback.txt"), "at", encoding="utf-8") as f:
         f.write(
             f"in: {calframe[1][3]}()\ntime: {datetime.datetime.now()}\nmessage: "
             + message
@@ -136,9 +152,28 @@ def add_to_traceback(message: str) -> None:
 
 
 def config(config: str) -> Any:
-    with open("../config/config.json", "rt", encoding="utf-8") as f:
+    """Gets a certain key from the config file.
+
+    Args:
+        config (str): The json key.
+
+    Returns:
+        Any: The resulting object.
+    """
+    with open(Path("../config/config.json"), "rt", encoding="utf-8") as f:
         configs = json.loads(f.read())[config]
     return configs
+
+
+def banned_subs() -> List[str]:
+    """Returns the currently banned subs.
+
+    Returns:
+        List[str]: The banned subs.
+    """
+    with open(Path("../data/subs.json"), "rt", encoding="utf-8") as f:
+        subs = json.loads(f.read())["banned_subs"]
+    return [x.lower() for x in subs]
 
 
 def send_to_webhook(data: dict, use_alt: str = "") -> bool:
@@ -150,7 +185,7 @@ def send_to_webhook(data: dict, use_alt: str = "") -> bool:
     Returns:
         bool: True if response is ok False if not.
     """
-    with open("../data/secrets.json", "rt", encoding="utf-8") as f:
+    with open(Path("../data/secrets.json"), "rt", encoding="utf-8") as f:
         webhook = json.loads(f.read())["webhook" + use_alt]
     response = requests.post(
         webhook,
@@ -187,6 +222,11 @@ def check_ratelimit(reddit: "praw.reddit.Reddit", debug: bool = False):
 
 
 def gen_reddit_instance() -> praw.Reddit:
+    """Generates a praw.Reddit instance.
+
+    Returns:
+        praw.Reddit: The reddit instance.
+    """
     reddit = praw.Reddit(
         client_id=client_id,
         client_secret=client_secret,
@@ -205,10 +245,10 @@ def update_modded_subreddits(reddit: praw.reddit.Reddit) -> None:
         reddit (praw.reddit.Reddit): The Reddit instance.
     """
     mod_dict = [str(x) for x in reddit.user.moderator_subreddits(limit=None)]
-    with open("../cache/moderated_subreddits.cache.json") as f:
+    with open(Path("../cache/moderated_subreddits.cache.json")) as f:
         mod_subs = json.loads(f.read())
 
     mod_subs["subreddits"] = mod_dict
 
-    with open("../cache/moderated_subreddits.cache.json", "wt") as f:
+    with open(Path("../cache/moderated_subreddits.cache.json"), "wt") as f:
         f.write(json.dumps(mod_subs, indent=4))

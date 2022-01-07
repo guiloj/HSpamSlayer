@@ -50,3 +50,15 @@
         "webhook": ""
     }
     ```
+
+After you are done it should look something like this:
+
+```json
+{
+    "secret": "SECRET",
+    "id": "ID",
+    "username": "USERNAME",
+    "password": "PASSWORD",
+    "agent": "<AGENT>",
+}
+```

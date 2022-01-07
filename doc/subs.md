@@ -1,17 +1,11 @@
 # data/subs.json
 
-## "banned_subs"
+Here is your blacklist, the bot will get the subs from this list every time it needs them, so no need to restart the bot after changing it.
 
-**Type:** Array\<String>
-
-**What:** A list of all the subreddit the bot should watch over and ban the authors.
-
-**Example:**
-
-> ban all new authors from r/redditdev and r/learnpython
-
+e.g.
 ```json
 {
     "banned_subs": ["redditdev", "learnpython"]
 }
 ```
+> here the subs r/redditdev and r/learnpython are blacklisted, and any crosspost from them will be deleted.

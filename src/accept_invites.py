@@ -20,7 +20,6 @@ Accepts all mod invites.
 ###############################################
 
 import os
-import json
 import praw
 import praw.models
 import praw.exceptions
@@ -48,25 +47,13 @@ os.chdir(os.path.dirname(ABSPATH))
 ###############################################
 
 
-def message_configs() -> dict:
-    """Grabs the message configs for a dynamic configuration process.
-
-    Returns:
-        dict: All of the configs to be used in **kwargs
-    """
-    with open("../config/config.json", "rt", encoding="utf-8") as f:
-        configs = json.loads(f.read())
-
-    return configs["message"]
-
-
 def send_message(subreddit: praw.models.Subreddit) -> None:
     """Sends a message to the mods of the invited subreddit as soon as a invite is accepted.
 
     Args:
         subreddit (praw.models.Subreddit): The subreddit in question, can also be formated into the message.
     """
-    options = message_configs()
+    options = std.config("message")
 
     try:
         options["message"] = options["message"].format("r/" + str(subreddit))
@@ -80,10 +67,23 @@ def send_message(subreddit: praw.models.Subreddit) -> None:
 
 
 def can_sticky(subreddit: praw.models.Subreddit) -> bool:
+    """If the limit of sticky posts for a subreddit is reached.
+
+    Args:
+        subreddit (praw.models.Subreddit): The given subreddit.
+
+    Returns:
+        bool: If the limit was reached or not.
+    """
     return sum(1 for post in subreddit.hot(limit=2) if post.stickied) < 2
 
 
 def make_announcement(subreddit: praw.models.Subreddit):
+    """Make an announcement to a given subreddit
+
+    Args:
+        subreddit (praw.models.Subreddit): The subreddit to make an announcement to.
+    """
     try:
         if can_sticky(subreddit):
             submission: praw.models.Submission = subreddit.submit(
@@ -108,28 +108,26 @@ def auto_accept_invites(reddit: "praw.reddit.Reddit"):
                 std.check_ratelimit(reddit, True)
 
                 if isinstance(unread, SubredditMessage):
+                    if (
+                        str(unread.subreddit).lower()
+                        in [x.lower() for x in std.config("no_invite")]
+                        + std.banned_subs()
+                    ):
+                        continue
+
                     try:
                         reddit.subreddit(str(unread.subreddit)).mod.accept_invite()
-                        if std.config("webhook"):
-                            std.send_to_webhook(
-                                {
-                                    "content": "<@235950285569130496>",
-                                    "embeds": [
-                                        {
-                                            "author": {
-                                                "name": "HSpamSlayer",
-                                                "url": "https://www.reddit.com/user/HSpamSlayer",
-                                                "icon_url": "https://styles.redditmedia.com/t5_5czm0s/styles/profileIcon_aaqhxf65yj081.jpeg?width=256&height=256&crop=256:256,smart&s=0709aa35f8ca40351ed717448529deba63cec82e",
-                                            },
-                                            "title": f"Invite from {unread.subreddit} accepted!",
-                                            "url": f"https://www.reddit.com/r/{unread.subreddit}",
-                                        }
-                                    ],
-                                },
-                                "2",
-                            )
-                        make_announcement(unread.subreddit)
+                        time.sleep(1)  # sleep just to be 100% sure
                         send_message(unread.subreddit)
+                        make_announcement(unread.subreddit)
+
+                        if std.config("webhooks")["use"]:
+                            message = std.format_webhook(
+                                std.config("webhooks")["invite_accept"],
+                                sub=str(unread.subreddit),
+                            )
+                            std.send_to_webhook(message)
+
                     except (
                         praw.exceptions.RedditAPIException,
                         prawcore.exceptions.NotFound,

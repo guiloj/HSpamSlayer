@@ -30,6 +30,7 @@ import _stdmodule as std
 import time
 import threading
 import uuid
+from pathlib import Path
 
 ###############################################
 # FILE MANAGEMENT
@@ -45,6 +46,14 @@ os.chdir(os.path.dirname(ABSPATH))
 # CLASSES
 ###############################################
 class StreamThread(threading.Thread):
+    """Class to handle threads used for post streams.
+
+    Args:
+        target (Callable[[Any], Any]): The function to call.
+        args (List): Arguments passed to the function.
+        id_ (uuid.UUID): The id assigned to the thread.
+    """
+
     def __init__(
         self, target: Callable[[Any], Any], args: "List | Tuple", id_: uuid.UUID
     ):
@@ -57,20 +66,16 @@ class StreamThread(threading.Thread):
 ###############################################
 
 
-def ban_configs() -> dict:
-    """Grabs the ban configs for a dynamic configuration process.
+def get_banned_user_subs(user_name: str) -> Dict[str, str]:
+    """Gets the subs a user has been banned from the cache.
+
+    Args:
+        user_name (str): The user's name.
 
     Returns:
-        dict: All of the configs to be used in **kwargs.
+        Dict[str, str]: The subs a user has been banned from.
     """
-    with open("../config/config.json", "rt", encoding="utf-8") as f:
-        configs = json.loads(f.read())["action"]
-
-    return configs
-
-
-def get_banned_user_subs(user_name: str) -> Dict[str, str]:
-    with open("../cache/banned_users.cache.json") as f:
+    with open(Path("../cache/banned_users.cache.json")) as f:
         users = json.loads(f.read())["banned_users"]
 
     return users.get(user_name, {})
@@ -79,7 +84,13 @@ def get_banned_user_subs(user_name: str) -> Dict[str, str]:
 def add_to_banned_users(
     subreddits: List[praw.models.Subreddit], user_name: str
 ) -> None:
-    with open("../cache/banned_users.cache.json") as f:
+    """Adds subs to a particular user on the banned users cache.
+
+    Args:
+        subreddits (List[praw.models.Subreddit]): The subs the user is now banned in.
+        user_name (str): The user's name.
+    """
+    with open(Path("../cache/banned_users.cache.json")) as f:
         current = json.loads(f.read())
 
     if not current["banned_users"].get(user_name, False):
@@ -88,7 +99,7 @@ def add_to_banned_users(
     for sub in subreddits:
         current["banned_users"][user_name][str(sub)] = str(sub)
 
-    with open("../cache/banned_users.cache.json", "wt") as f:
+    with open(Path("../cache/banned_users.cache.json"), "wt") as f:
         f.write(json.dumps(current, indent=4))
 
 
@@ -100,7 +111,7 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
         user_name (str): The userss name.
     """
 
-    options = ban_configs()
+    options = std.config("action")
 
     try:
         options["ban_message"] = options["ban_message"].format("r/" + str(subreddit))
@@ -110,14 +121,13 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str) -> None:
     subreddit.banned.add(user_name, **options)
 
 
-def get_banned_subs() -> List[str]:
-    with open("../data/subs.json") as f:
-        subs = json.loads(f.read())["banned_subs"]
-    return [x.lower() for x in subs]
-
-
 def get_modded_subs() -> List[str]:
-    with open("../cache/moderated_subreddits.cache.json") as f:
+    """Gets the subs the bot moderates from the cache.
+
+    Returns:
+        List[str]: The subs the bot mods.
+    """
+    with open(Path("../cache/moderated_subreddits.cache.json")) as f:
         subs = json.loads(f.read())
     try:
         return [
@@ -130,20 +140,13 @@ def get_modded_subs() -> List[str]:
         return get_modded_subs()
 
 
-def remove_config() -> dict:
-    with open("../config/config.json", "rt", encoding="utf-8") as f:
-        configs = json.loads(f.read())["remove"]
-
-    return configs
-
-
 def remove_submission(submission: praw.reddit.Submission) -> None:
     """Removes a submission and sends a removal message.
 
     Args:
         submission (praw.reddit.Submission): The submission to be removed.
     """
-    configs = remove_config()
+    configs = std.config("remove")
     try:
         submission.mod.remove()
         submission.mod.send_removal_message(**configs)
@@ -191,55 +194,70 @@ def flexible_ban(reddit: praw.reddit.Reddit, user_name: str) -> None:
 
 def check_moderated_subs(
     id_: uuid.UUID, subs_dict: Dict[uuid.UUID, List[str]], errors_queue: queue.Queue
-):
+):  # sourcery no-metrics
     """Checks all blacklisted subs for new posts and bans the authors.
 
     Args:
         reddit (praw.reddit.Reddit): The reddit instance.
     """
-    try:
-        reddit = std.gen_reddit_instance()
-        while 1:
-            modded = subs_dict[id_]
-            post_stream = reddit.subreddit("+".join(modded)).stream.submissions(
-                skip_existing=True, pause_after=10  # skip_existing=True
-            )
+    while 1:
+        try:
+            reddit = std.gen_reddit_instance()
+            while 1:
+                modded = subs_dict[id_]
+                post_stream = reddit.subreddit("+".join(modded)).stream.submissions(
+                    skip_existing=True, pause_after=10  # skip_existing=True
+                )
 
-            for post in post_stream:
-                std.check_ratelimit(reddit, True)
-                if post is None:
-                    time.sleep(10)
-                    continue
+                for post in post_stream:
+                    std.check_ratelimit(reddit, True)
+                    if post is None:
+                        time.sleep(10)
+                        continue
 
-                if hasattr(post, "crosspost_parent"):
-                    parent = reddit.submission(post.crosspost_parent.split("_")[1])
-                    if str(parent.subreddit).lower() in get_banned_subs():
-                        std.logger.info(f"Bad crosspost found: {post.permalink}")
-                        if post.author == parent.author:
-                            threading.Thread(
-                                target=flexible_ban,
-                                args=(std.gen_reddit_instance(), str(post.author)),
-                            ).start()
+                    if hasattr(post, "crosspost_parent"):
+                        parent = reddit.submission(post.crosspost_parent.split("_")[1])
+                        if str(parent.subreddit).lower() in std.banned_subs():
+                            std.logger.info(f"Bad crosspost found: {post.permalink}")
+                            if post.author == parent.author:
+                                threading.Thread(
+                                    target=flexible_ban,
+                                    args=(std.gen_reddit_instance(), str(post.author)),
+                                ).start()
 
-                        remove_submission(post)
+                            remove_submission(post)
 
-                    continue
+                    if not len(subs_dict[id_]):
+                        return
+                    if modded != subs_dict[id_]:
+                        break
+            break
 
-                if modded != subs_dict[id_]:
-                    break
+        except (
+            prawcore.exceptions.ServerError,
+            prawcore.exceptions.RequestException,
+        ) as e:
+            std.add_to_traceback("Reddit API is down: " + str(e))
+            time.sleep(60)
+        except prawcore.exceptions.Forbidden as e:
+            std.logger.critical(str(e))
+            time.sleep(60)
+        except Exception as e:
+            errors_queue.put(e)
+            return
+        if not len(subs_dict[id_]):
+            return
 
-    except prawcore.exceptions.ServerError as e:
-        std.add_to_traceback("Reddit API is down: " + str(e))
-        time.sleep(60)
-    except prawcore.exceptions.Forbidden as e:
-        std.logger.critical(str(e))
-        time.sleep(60)
-    except Exception as e:
-        errors_queue.put(e)
-        return
 
+def generate_safe_id(is_in: dict) -> uuid.UUID:
+    """Generates an id that does not exist in the threads dict.
 
-def generate_safe_id(is_in) -> uuid.UUID:
+    Args:
+        is_in (dict): The threads dict.
+
+    Returns:
+        uuid.UUID: The id.
+    """
     _id = uuid.uuid4()
     while _id in is_in:
         _id = uuid.uuid4()
@@ -262,6 +280,16 @@ def list_diff(list_: list, other: list):
 def mk_mod_stream(
     subs: list, threads_dict: Dict[str, List[str]], errors_queue: queue.Queue
 ) -> StreamThread:
+    """Makes and starts a StreamThread.
+
+    Args:
+        subs (list): The subs that thread is responsable for moderating.
+        threads_dict (Dict[str, List[str]]): The threads dict used to update the subs.
+        errors_queue (queue.Queue): The queue object used to handle errors
+
+    Returns:
+        StreamThread: The generated StreamThread
+    """
     id_ = generate_safe_id(threads_dict)
     stream = StreamThread(check_moderated_subs, (id_, threads_dict, errors_queue), id_)
     threads_dict[id_] = subs
@@ -270,6 +298,15 @@ def mk_mod_stream(
 
 
 def fill_thread(new: list, filled: int):
+    """Fills a list based on the limit defined as std.LIMIT and returns the remainder.
+
+    Args:
+        new (list): The list to be filled.
+        filled (int): How much of the other list is filled.
+
+    Returns:
+        Tuple[List[str], List[str]]: The list of elements that can fit in a list already filled by `filled` items and limited by `std.LIMIT`, the remainder.
+    """
     return (
         [x for idx, x in enumerate(new) if idx < std.LIMIT - filled],
         [x for idx, x in enumerate(new) if idx >= std.LIMIT - filled],
@@ -277,13 +314,22 @@ def fill_thread(new: list, filled: int):
 
 
 def split_sub_list(subs: list):
+    """Splits a list into a list of lists with a maximum amount of items determined by std.LIMIT
+
+    Args:
+        subs (list): The list.
+
+    Returns:
+        List[List[str]]: The now splitted list.
+    """
     return [subs[x : x + std.LIMIT] for x in range(0, len(subs), std.LIMIT)]
 
 
 def gen_mod_streams():  # sourcery no-metrics
+    """Manages and generates all the stream threads."""
     modded_subs = get_modded_subs()
     errors_queue = queue.Queue()
-    threads_dict = {}
+    threads_dict: Dict[uuid.UUID, List[str]] = {}
 
     running_threads = [
         mk_mod_stream(sub_list, threads_dict, errors_queue)
@@ -326,10 +372,23 @@ def gen_mod_streams():  # sourcery no-metrics
                     )
                 std.logger.info(f"Threads created: {len(to_add)}")
 
-        if not errors_queue.empty:
-            error = errors_queue.get()
-            std.logger.critical(error)
-            raise error
+        if not errors_queue.empty():
+            std.logger.critical("A critical error occurred! stopping all threads!")
+
+            err = errors_queue.get()
+            std.sys.stderr.write(err)
+            std.add_to_traceback(err)
+            # NOTE: trying to find a better solution.
+            # for thread in running_threads:
+            #     threads_dict[thread.id].clear()
+
+            # std.logger.critical("Threads mod list cleared.")
+
+            # for idx, thread in enumerate(running_threads):
+            #     thread.join()
+            #     running_threads.pop(idx)
+            # std.logger.critical("Threads joined.")
+            quit(1)
 
         killed = 0
         for idx, thread in enumerate(running_threads):

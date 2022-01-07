@@ -1,196 +1,166 @@
 # config/config.json
 
-## "webhook"
+## "webhooks"
 
-**Why:** If anything goes wrong with `mod_posts.py` or `accept_invites.py` the `_stdmodule.send_to_webhook` function that is called in `main.py` is made to alert the user that something went wrong with scripts and that action must be taken.
+`"use"`
 
-**Type:** Boolean
+Decides if webhooks are going to be used by the script, if it is ever set to `true` a webhook must be added to [secrets.json](https://github.com/guiloj/HSpamSlayer/blob/master/doc/secrets.md) and the following objects must be configured.
 
-**Example:**
+`"main_critical"`
 
-> config.json
+The json object that is posted to the webhook when a script fails and halts. The formatting strings that can be added are:
+
+-   `"%(filename)s"` - The file name of the script that failed.
+-   `"%(exitcode)s"` - The exit code that the script returned.
+-   `"%(error)s"` - The error message.
+
+`"invite_accept"`
+
+The json object that is posted to the webhook when an invite gets accepted. The formatting strings that can be added are:
+
+-   `"%(sub)s"` - The subreddit that has invited the bot.
 
 ```json
 {
-    "webhook": true
-}
+    "webhooks": {
+        "use": false,
+        "main_critical": {},
+        "invite_accept": {}
+    }
 ```
 
-> secrets.json
+---
+
+## "no_invite"
+
+list of subs that the bot should not accept invites from (besides blacklisted subs).
 
 ```json
-{
-    "webhook": "https://discord.com/api/webhooks/000000000000000000/00000000000000000000000000000000000000000000000000000000000000000000"
-}
+    "no_invite": [],
 ```
 
-**Warnings:**
-
--   Made for a discord webhook.
--   Must add the webhook link to the [`../data/secrets.json`](https://github.com/guiloj/HSpamSlayer/blob/master/doc/secrets.md) file
+---
 
 ## "action"
 
-**Type:** Dictionary<String, String|Integer>
+`"ban_message"`
 
-**What:** The ban configuration container.
+The message that is sent via modmail to a user that got banned by the bot.
 
-### "ban_message"
+`"ban_reason"`
 
-**Type:** String
+The reason for the ban.
 
-**What:** A message that gets sent to a user when it gets banned by the bot.
+`"duration"`
 
-**Extra:** Add a `{0}` where you want the name of the subreddit to be.
+For how long the ban lasts (in days), `null` = perma ban.
 
-**Example:**
+`"note"`
 
-```json
-{
-    "action": {
-        "ban_message": "Sorry for the ban from {0} lmao."
-    }
-}
-```
+The mod's note, shown in the mod log.
 
-"
-
-### "ban_reason"
-
-**Type:** String
-
-**What:** Reason why the user was banned.
-
-**Example:**
+**[read more...](https://www.reddit.com/dev/api/#POST_api_friend)**
 
 ```json
-{
     "action": {
-        "ban_reason": "spammer"
+        "ban_message": "",
+        "ban_reason": "",
+        "duration": null,
+        "note": ""
     }
-}
 ```
 
-### "duration"
-
-**Type:** Integer
-
-**What:** The time a user should be banned for in days, goes from 1 to 999, `null` = permaban.
-
-**Example:**
-
-> One day ban.
-
-```json
-{
-    "action": {
-        "duration": 1
-    }
-}
-```
-
-> Permaban.
-
-```json
-{
-    "action": {
-        "duration": null
-    }
-}
-```
-
-### "note"
-
-**Type:** String
-
-**What:** A note for the actual moderators.
-
-**Example:**
-
-```json
-{
-    "action": {
-        "note": "User is not, in fact, cool."
-    }
-}
-```
+---
 
 ## "message"
 
-**Type:** Dictionary<String, String>
+`"subject"`
 
-**What:** The invite accept message config container.
+The subject of the modmail being sent to a sub's mods on invite accept.
 
-### "subject"
+`"message"`
 
-**Type:** String
+The content of the modmail being sent on invite accept. The message accepts the following formatting strings:
 
-**What:** The message subject.
-
-**Example:**
+-   `"{0}"` - The sub that invited the bot.
 
 ```json
-{
     "message": {
-        "subject": "Invite Accepted!"
+        "subject": "",
+        "message": ""
     }
-}
 ```
 
-### "message"
+---
 
-**Type:** String
+## "announcement"
 
-**What:** The message that is going to be sent to a mod that invited the bot.
+`"title"`
 
-**Extra:** Add a `{0}` where you want the name of the subreddit to be.
+The title of the announcement being posted on a sub on invite, **if there are less then 2 pinned posts on that sub**.
 
-**Example:**
+`"selftext"`
+
+The content of the announcement being posted on a sub on invite.
 
 ```json
-{
-    "message": {
-        "message": "We accepted your invite to moderate {0}, enjoy!"
+    "announcement": {
+        "title": "",
+        "selftext": ""
     }
-}
 ```
+
+---
 
 ## "remove"
 
-**Type:** Dictionary<String, String>
+`"message"`
 
-**What:** The remove post config container.
+The message being sent to a user on post removal.
 
-### "message"
+`"type"`
 
-**Type:** String
+What type of message is being sent, defaulted to `"public"` meaning a sticky comment on the post in question.
 
-**What:** The message sent to the user.
-
-**Example:**
+**[read more...](https://praw.readthedocs.io/en/stable/code_overview/other/submissionmoderation.html#praw.models.reddit.submission.SubmissionModeration.send_removal_message)**
 
 ```json
-{
     "remove": {
-        "message": "got your post removed lmao"
-    }
-}
-```
-
-### "type"
-
-**Type:** String
-
-**What:** The type of remove that should be done.
-
-**Example:**
-
-```json
-{
-    "remove": {
+        "message": "",
         "type": "public"
     }
 }
 ```
 
-### [read more...](https://praw.readthedocs.io/en/stable/code_overview/other/submissionmoderation.html#praw.models.reddit.submission.SubmissionModeration.send_removal_message)
+---
+
+When you are done configuring a the bot it should look a little something like this:
+
+```json
+{
+    "webhooks": {
+        "use": false,
+        "main_critical": {},
+        "invite_accept": {}
+    },
+    "no_invite": ["Subs", "that", "you", "don't", "want", "invites", "from"],
+    "action": {
+        "ban_message": "Message sent when a user is banned",
+        "ban_reason": "The reason why he was banned",
+        "duration": null,
+        "note": "The mod note"
+    },
+    "message": {
+        "subject": "Subject of the message sent to a sub on invite accept",
+        "message": "The message sent to a sub on invite accept, add {0} where you want the name of the sub to be"
+    },
+    "announcement": {
+        "title": "Title of the announcement that is posted to a sub on invite accept if there are slots available",
+        "selftext": "Content of the announcement"
+    },
+    "remove": {
+        "message": "The message that is sent when a user get's a post removed",
+        "type": "public"
+    }
+}
+```
