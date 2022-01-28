@@ -9,7 +9,7 @@ A simple bot to help keep spam away from your _H_ subreddit.
 -   [[About](#about)] - Information about the bot
 -   [[Setup](#setup)] - Invite the bot to mod your subreddit
 -   [[Installation](#installation)] - Install and modify your version of the bot ([GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.txt))
--   [[Docs](https://github.com/guiloj/HSpamSlayer/tree/master/doc/)] - **RTFM!**
+-   [[Docs](./doc/)] - **RTFM!**
 
 # About
 
@@ -73,7 +73,5 @@ _(configuration changes are not changes)_
     ```sh
     python3 setup.py
     ```
--   Configure the bot
-    -   [Configure the config file -> ./config/config.json](https://github.com/guiloj/HSpamSlayer/blob/master/doc/config.md)
-    -   [Configure the secrets file -> ./data/secrets.json](https://github.com/guiloj/HSpamSlayer/blob/master/doc/secrets.md)
-    -   [Configure the subs file -> ./data/subs.json](https://github.com/guiloj/HSpamSlayer/blob/master/doc/subs.md)
+
+## [>> Configure the bot](./doc/index.md)

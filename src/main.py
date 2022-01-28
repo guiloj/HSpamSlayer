@@ -1,89 +1,92 @@
-"""
-# src/main.py
-
-Starts the bot.
-
-    @comments
-    '?': why is this code here?
-    '*': what is the code doing
-    '!': warning!
-    'NOTE': a note
-
-    @dev  
-    'TODO': todo notes
-    'FIXME': needs fixing
-    'XXX': makes no sense but works
-"""
-
-###############################################
-# IMPORTS
-###############################################
+#############################
+# ======== IMPORTS ======== #
+#############################
 
 import os
-import time
 import sys
-from subprocess import Popen, PIPE
-import _stdmodule as std
+import time
+from subprocess import PIPE, Popen
 
-###############################################
-# FILE MANAGEMENT
-###############################################
+from _plugin_loader import PluginLoader
+from _stdlib import Configs, Logger, p
 
-# ? correctly finds the path to the main.py file to
-# ? manage the modules and libs
+############################
+# ======== PATHS ========= #
+############################
+
 
 ABSPATH = os.path.abspath(__file__)
-os.chdir(os.path.dirname(ABSPATH))
+ABSDIR = p(os.path.dirname(ABSPATH))
 
-###############################################
-# MAIN
-###############################################
 
-# TODO: (@guiloj) add tests for all scripts
+###############################
+# ======== INSTANCES ======== #
+###############################
+
+
+configs = Configs()
+logger = Logger(str(ABSDIR.joinpath("../logs/main.log")), "Main")
+plugins = PluginLoader(["on_main_critical"])
+
+
+##########################
+# ======== MAIN ======== #
+##########################
 
 
 def main():
-    # * (@guiloj) starts all bot scripts simultaneously
     processes = [
-        Popen([sys.executable, script], stdout=sys.stdout, stderr=PIPE)
-        for script in ["accept_invites.py", "mod_posts.py"]
+        Popen(
+            [sys.executable, str(ABSDIR.joinpath(script))],
+            stdout=sys.stdout,
+            stderr=PIPE,
+        )
+        for script in configs.get("main.py", "scripts")
+        if not script.startswith("_")
     ]
+
     try:
+
         while 1:
+            time.sleep(120)
 
-            time.sleep(100)
+            for process in processes.copy():
 
-            # * (@guiloj) checks if any of the scripts stopped unexpectedly
-            for idx, process in enumerate(processes):
-                if (code := process.poll()) != None:
-                    _, err = process.communicate()
-                    err = str(err)
-                    name = process.args[1]
+                if (exit_code := process.poll()) != None:
 
-                    std.add_to_traceback(f"{name}: {code}\n{err}")
+                    _, error = process.communicate()
+                    file_name = process.args[1]  # type: ignore
 
-                    processes.pop(idx)
+                    error = error.decode("utf-8")
 
-                    # ? (@guiloj) to alert owner that one of the scripts have stopped, is on `../config/config.json`
-                    if std.config("webhooks")["use"]:
-                        message = std.format_webhook(
-                            std.config("webhooks")["main_critical"],
-                            filename=name,
-                            exitcode=code,
-                            error=err,
-                        )
-                        std.send_to_webhook(message)
+                    logger.critical(
+                        "Process %s exited with code %d : %s"
+                        % (file_name, exit_code, error)
+                    )
+
+                    processes.remove(process)
+
+                    plugins.on(
+                        "on_main_critical",
+                        file_name=file_name,
+                        exit_code=exit_code,
+                        error=error,
+                    )
 
             if not len(processes):
                 break
 
-    except KeyboardInterrupt:
-        std.logger.info(
-            "KeyboardInterrupt: terminating processes and exiting with code 1..."
-        )
+    except (SystemExit, KeyboardInterrupt):
+        logger.info("SystemExit: terminating processes and exiting with code 1...")
+
         for process in processes:
             process.kill()
-        quit(1)
+
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+        sys.exit(1)
+    return
 
 
 if __name__ == "__main__":

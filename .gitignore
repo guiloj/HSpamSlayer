@@ -1,17 +1,10 @@
-# folders
-config
-cache
-__pycache__
-.vscode
-
-# DO NOT EDIT
 data
-#############
-
-
-# files
-*swp
-traceback.txt
-test_*
+config
+keys
+cache
+.vscode
+hide_*
 auto_*
+__pycache__
+logs
 secrets.json
