@@ -69,9 +69,12 @@ class Configs:
         with open(self.config_path, "rt", encoding="utf-8") as f:
             configs: Dict[str, Any] = json.load(f)
 
-        for key in keys:
-            configs = configs[key]
-
+        try:
+            for key in keys:
+                configs = configs[key]
+        except (KeyError, IndexError) as e:
+            _logger.error("%s is not a valid path" % keys)
+            return None
         return configs
 
 
@@ -235,6 +238,29 @@ _logger = Logger(str(ABSDIR.joinpath("../logs/std.lib.log")), "StdLib")
 ###############################
 # ======== FUNCTIONS ======== #
 ###############################
+
+
+def catch(error: BaseException, logger: logging.Logger) -> int:
+
+    if isinstance(error, PrawErrors.Critical):
+        logger.critical(
+            "Critical error ocurred: %s : %s" % (type(error).__name__, error)
+        )
+        time.sleep(60)
+    elif isinstance(error, PrawErrors.NonCritical):
+        logger.warning("Reddit API is down: %s : %s" % (type(error).__name__, error))
+        time.sleep(120)
+    elif isinstance(error, PrawErrors.SysExit):
+        logger.critical(
+            "An exception went unhandled: %s : %s" % (type(error).__name__, error)
+        )
+        return 1
+    else:
+        logger.critical(
+            "Something went very wrong: %s : %s" % (type(error).__name__, error)
+        )
+        return 1
+    return 0
 
 
 def _as_dict(obj: object):

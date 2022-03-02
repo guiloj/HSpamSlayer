@@ -34,6 +34,7 @@ _logger = Logger(
 # ======== CLASSES ======== #
 #############################
 
+
 # http://tomerfiliba.com/recipes/Thread2/
 class StreamThread(threading.Thread):
     def __init__(

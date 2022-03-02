@@ -52,7 +52,7 @@ def main():
 
             for process in processes.copy():
 
-                if (exit_code := process.poll()) != None:
+                if (exit_code := process.poll()) is not None:
 
                     _, error = process.communicate()
                     file_name = process.args[1]  # type: ignore

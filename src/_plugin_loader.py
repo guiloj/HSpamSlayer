@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 from types import ModuleType
-from typing import Callable, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 from _stdlib import Configs, Logger, p
 

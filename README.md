@@ -1,5 +1,14 @@
 # HSpamSlayer
 
+[![python v3.8](https://img.shields.io/github/pipenv/locked/python-version/guiloj/HSpamSlayer?style=for-the-badge)](https://www.python.org/downloads/)
+[![license GPL-3.0](https://img.shields.io/github/license/guiloj/HSpamSlayer?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.txt)
+
+[![dependencies](https://img.shields.io/librariesio/github/guiloj/HSpamSlayer?style=for-the-badge)](https://libraries.io/github/guiloj/HSpamSlayer)
+
+[![praw v7.5.0](https://img.shields.io/github/pipenv/locked/dependency-version/guiloj/HSpamSlayer/praw?style=for-the-badge)](https://pypi.org/project/praw/)
+[![prawcore v2.3.0](https://img.shields.io/github/pipenv/locked/dependency-version/guiloj/HSpamSlayer/prawcore?style=for-the-badge)](https://pypi.org/project/prawcore/)
+[![requests v2.22.0](https://img.shields.io/github/pipenv/locked/dependency-version/guiloj/HSpamSlayer/requests?style=for-the-badge)](https://pypi.org/project/requests/)
+
 <a href="https://www.pixiv.net/en/artworks/59561246"><img style="height: 400px; border-radius: 10px;" class="taiga" src="https://cdn.discordapp.com/attachments/766913349442600971/913633329130115092/59561246_p0_master1200.png"><img></a>
 
 A simple bot to help keep spam away from your _H_ subreddit.

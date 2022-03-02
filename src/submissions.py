@@ -2,7 +2,6 @@
 # ======== IMPORTS ======== #
 #############################
 
-import multiprocessing
 import os
 import pickle
 import threading
@@ -19,8 +18,8 @@ from _stdlib import (
     Configs,
     Logger,
     Moderating,
-    PrawErrors,
     Secrets,
+    catch,
     control_ratelimit,
     gen_reddit_instance,
     p,
@@ -177,16 +176,11 @@ def check_submissions(  # sourcery no-metrics
                 if modded != subs_dict[id_]:
                     break
 
-        except PrawErrors.Critical as e:
-            logger.critical("Critical error ocurred: %s" % e)
-            time.sleep(60)
-        except PrawErrors.NonCritical as e:
-            logger.warning("Reddit API is down: %s" % e)
-            time.sleep(120)
-        except PrawErrors.SysExit as e:
-            logger.critical("An exception went unhandled: %s" % e)
-            errors.put(e)
-            break
+        except BaseException as e:
+            if catch(e, logger):
+                errors.put(e)
+                break
+            continue
 
 
 def manage_bans(thread_manager: ThreadManager):
@@ -199,21 +193,14 @@ def manage_bans(thread_manager: ThreadManager):
                     ban_cache_path.unlink(True)
                 continue
 
-            user = ban_queue.get()
-
-            if user:
+            if user := ban_queue.get():
                 ban_user_in_moderating(user)
 
-        except PrawErrors.Critical as e:
-            logger.critical("Critical error ocurred: %s" % e)
-            time.sleep(60)
-        except PrawErrors.NonCritical as e:
-            logger.warning("Reddit API is down: %s" % e)
-            time.sleep(120)
-        except PrawErrors.SysExit as e:
-            logger.critical("An exception went unhandled: %s" % e)
-            thread_manager.errors.put(e)
-            break
+        except BaseException as e:
+            if catch(e, logger):
+                thread_manager.errors.put(e)
+                break
+            continue
 
 
 def manage_threads(thread_manager: ThreadManager):

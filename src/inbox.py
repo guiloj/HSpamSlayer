@@ -16,7 +16,7 @@ from _stdlib import (
     Configs,
     Logger,
     Moderating,
-    PrawErrors,
+    catch,
     control_ratelimit,
     gen_reddit_instance,
     p,
@@ -177,19 +177,13 @@ def main():
     while 1:
         try:
             check_inbox(reddit)
-        except PrawErrors.Critical as e:
-            logger.critical("Critical error ocurred: %s" % e)
-            time.sleep(60)
-        except PrawErrors.NonCritical as e:
-            logger.warning("Reddit API is down: %s" % e)
-            time.sleep(120)
         except KeyboardInterrupt:
             break
-        except PrawErrors.SysExit as e:
-            logger.critical("An exception went unhandled: %s" % e)
-            logger.info("Raising exception: %s" % e)
-            error = e
-            break
+        except BaseException as e:
+            if catch(e, logger):
+                error = e
+                break
+            continue
 
     raise error
 
