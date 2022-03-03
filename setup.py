@@ -20,7 +20,16 @@ from typing import NoReturn
 ABSPATH = os.path.abspath(__file__)
 os.chdir(os.path.dirname(ABSPATH))
 
-dir_paths = ["cache", "config", "config/plugins", "data", "keys", "plugins", "logs"]
+dir_paths = [
+    "cache",
+    "config",
+    "config/plugins",
+    "config/subs",
+    "data",
+    "keys",
+    "plugins",
+    "logs",
+]
 file_paths = {
     "cache/banned_users.cache.json": "{}",
     "cache/moderated_subreddits.cache.json": "[]",
@@ -48,7 +57,7 @@ def progress_bar(current: int, total: int, message: str = ""):
 
 
 def confirm(string: str) -> "None | NoReturn":
-    yn = input(string + " [Y/n] ")
+    yn = input(f"{string} [Y/n] ")
     if yn.lower() != "y":
         print("Abort.")
         quit(1)

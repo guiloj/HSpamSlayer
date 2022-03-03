@@ -26,6 +26,7 @@ ABSDIR = p(os.path.dirname(ABSPATH))
 
 _secrets_path = str(ABSDIR.joinpath("../keys/secrets.json"))
 _config_path = str(ABSDIR.joinpath("../config/config.json"))
+_subs_config_path = str(ABSDIR.joinpath("../config/subs"))
 _blacklist_path = str(ABSDIR.joinpath("../data/blacklist.json"))
 _mod_cache_path = str(ABSDIR.joinpath("../cache/moderating_subreddits.cache.json"))
 _banned_cache_path = str(ABSDIR.joinpath("../cache/banned_users.cache.json"))
@@ -63,19 +64,34 @@ class PrawErrors:
 
 class Configs:
     def __init__(self, config_path: str = _config_path):
-        self.config_path = config_path
+        self.config_path = p(config_path).absolute()
 
-    def get(self, *keys) -> Any:
-        with open(self.config_path, "rt", encoding="utf-8") as f:
+        self.subs_path: p = p(_subs_config_path)
+
+    def _get(self, path: "str | p", *keys):
+        with open(path, "rt", encoding="utf-8") as f:
             configs: Dict[str, Any] = json.load(f)
 
         try:
             for key in keys:
                 configs = configs[key]
         except (KeyError, IndexError) as e:
-            _logger.error("%s is not a valid path" % keys)
+            _logger.error("Invalid path for dictionary object!")
             return None
         return configs
+
+    def get(self, *keys) -> Any:
+        return self._get(self.config_path, *keys)
+
+    def get_sub(self, sub: str, *keys) -> Any:
+        config_path = self.config_path
+
+        for config in self.subs_path.iterdir():
+            if config.name.replace(".json", "").lower() == sub.lower():
+                config_path = config
+                break
+
+        return self._get(config_path, *keys)
 
 
 class Banned:
