@@ -63,10 +63,14 @@ class PrawErrors:
 
 
 class Configs:
-    def __init__(self, config_path: str = _config_path):
+    def __init__(
+        self,
+        config_path: str = _config_path,
+        subs_path: str = _subs_config_path,
+    ):
         self.config_path = p(config_path).absolute()
 
-        self.subs_path: p = p(_subs_config_path)
+        self.subs_path = p(subs_path)
 
     def _get(self, path: "str | p", *keys):
         with open(path, "rt", encoding="utf-8") as f:
@@ -95,8 +99,11 @@ class Configs:
 
 
 class Banned:
-    def __init__(self, banned_cache_path: str = _banned_cache_path):
-        self.banned_cache_path = banned_cache_path
+    def __init__(
+        self,
+        banned_cache_path: str = _banned_cache_path,
+    ):
+        self.banned_cache_path = p(banned_cache_path)
 
     def get(self, user: str):
         with open(self.banned_cache_path, "rt", encoding="utf-8") as f:
