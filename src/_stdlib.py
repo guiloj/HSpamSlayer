@@ -15,6 +15,15 @@ from typing import Any, Dict, List, Tuple, Type
 import praw
 import prawcore
 
+from _validators import (
+    BANNED_SCHEMA,
+    BLACKLIST_SCHEMA,
+    CONFIG_SCHEMA,
+    MODERATING_SCHEMA,
+    SUB_CONFIG_SCHEMA,
+    validate,
+)
+
 ############################
 # ======== PATHS ========= #
 ############################
@@ -67,14 +76,20 @@ class Configs:
         self,
         config_path: str = _config_path,
         subs_path: str = _subs_config_path,
+        schema: object = CONFIG_SCHEMA,
     ):
         self.config_path = p(config_path).absolute()
 
         self.subs_path = p(subs_path)
 
-    def _get(self, path: "str | p", *keys):
+        self.schema = schema
+
+    def _get(self, path: "str | p", *keys, schema=None):
         with open(path, "rt", encoding="utf-8") as f:
             configs: Dict[str, Any] = json.load(f)
+
+        if error := validate(configs, self.schema if schema is None else schema):
+            raise error
 
         try:
             for key in keys:
@@ -95,27 +110,36 @@ class Configs:
                 config_path = config
                 break
 
-        return self._get(config_path, *keys)
+        return self._get(config_path, *keys, SUB_CONFIG_SCHEMA)
 
 
 class Banned:
     def __init__(
         self,
         banned_cache_path: str = _banned_cache_path,
+        schema: object = BANNED_SCHEMA,
     ):
         self.banned_cache_path = p(banned_cache_path)
 
-    def get(self, user: str):
+        self.schema = schema
+
+    def _get(self, user: str, schema=None):
         with open(self.banned_cache_path, "rt", encoding="utf-8") as f:
             banned: Dict[str, List[str]] = json.load(f)
+
+        if error := validate(banned, self.schema if schema is None else schema):
+            raise error
 
         for key, value in banned.items():
             if key.lower() == user.lower():
                 return value
 
+    def get(self, user: str):
+        return self._get(user)
+
     def is_in(self, user: str, subreddit: str):
 
-        banned_in = self.get(user)
+        banned_in = self._get(user)
 
         if banned_in is None:
             return False
@@ -125,10 +149,13 @@ class Banned:
 
         return False
 
-    def add(self, user: str, new_subs: List[str]):
+    def add(self, user: str, new_subs: List[str], schema=None):
         # sourcery skip: use-dict-items
         with open(self.banned_cache_path, "rt", encoding="utf-8") as f:
             banned: Dict[str, List[str]] = json.load(f)
+
+        if error := validate(banned, self.schema if schema is None else schema):
+            raise error
 
         for key in banned:
             if key.lower() == user.lower():
@@ -144,23 +171,33 @@ class Banned:
 
 
 class Blacklist:
-    def __init__(self, blacklist_path: str = _blacklist_path):
+    def __init__(self, blacklist_path: str = _blacklist_path, schema=BLACKLIST_SCHEMA):
         self.blacklist_path = blacklist_path
+        self.schema = schema
 
-    def get(self) -> List[str]:
+    def get(self, schema=None) -> List[str]:
         with open(self.blacklist_path, "rt", encoding="utf-8") as f:
             blacklist: List[str] = json.load(f)
+
+        if error := validate(blacklist, self.schema if schema is None else schema):
+            raise error
 
         return [sub.lower() for sub in blacklist]
 
 
 class Moderating:
-    def __init__(self, mod_cache_path: str = _mod_cache_path):
+    def __init__(
+        self, mod_cache_path: str = _mod_cache_path, schema: object = MODERATING_SCHEMA
+    ):
         self.mod_cache_path = mod_cache_path
+        self.schema = schema
 
-    def get(self) -> List[str]:
+    def get(self, schema=None) -> List[str]:
         with open(self.mod_cache_path, "rt", encoding="utf-8") as f:
             subs = json.load(f)
+
+        if error := validate(subs, self.schema if schema is None else schema):
+            raise error
 
         result = [
             x.lower() for x in subs if str(x).lower() != "u_" + Secrets.username.lower()

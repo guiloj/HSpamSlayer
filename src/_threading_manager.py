@@ -77,6 +77,7 @@ class ThreadManager:
         self.thread_dict = {}
         self.errors = Queue()
         self.target = target
+        self.alive = True
         self.running: List[StreamThread] = []
         self.last_running_len: int
         self.modding: List[str] = []
@@ -181,6 +182,8 @@ class ThreadManager:
                 thread.join()
 
             self.running.remove(thread)
+
+        self.alive = False
 
         _logger.info("Threads were terminated!")
 

@@ -5,7 +5,7 @@
 from typing import Callable, Tuple
 
 import jsonschema.exceptions
-from jsonschema import validate
+from jsonschema import validate as _validate
 
 ###############################
 # ======== CONSTANTS ======== #
@@ -14,9 +14,11 @@ from jsonschema import validate
 
 CONFIG_SCHEMA = {
     "type": "object",
+    "additionalProperties": False,
     "properties": {
         "logging": {
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "file_level": {"type": "integer"},
                 "stdout_level": {"type": "integer"},
@@ -25,15 +27,18 @@ CONFIG_SCHEMA = {
         },
         "threading": {
             "type": "object",
+            "additionalProperties": False,
             "properties": {"max_subs_per_thread": {"type": "integer"}},
             "required": ["max_subs_per_thread"],
         },
         "on_invite": {
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "send_message": {"type": "boolean"},
                 "message_content": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "subject": {"type": "string"},
                         "message": {"type": "string"},
@@ -43,6 +48,7 @@ CONFIG_SCHEMA = {
                 "make_announcement": {"type": "boolean"},
                 "announcement_content": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "title": {"type": "string"},
                         "selftext": {"type": "string"},
@@ -61,15 +67,18 @@ CONFIG_SCHEMA = {
         },
         "on_bad_post": {
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "remove": {"type": "boolean"},
                 "remove_opts": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {"spam": {"type": "boolean"}},
                     "required": ["spam"],
                 },
                 "remove_message_content": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "message": {"type": "string"},
                         "type": {"type": "string"},
@@ -79,6 +88,7 @@ CONFIG_SCHEMA = {
                 "ban": {"type": "boolean"},
                 "ban_opts": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "ban_message": {"type": "string"},
                         "ban_reason": {"type": "string"},
@@ -98,6 +108,7 @@ CONFIG_SCHEMA = {
         },
         "main.py": {
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "scripts": {
                     "type": "array",
@@ -110,6 +121,7 @@ CONFIG_SCHEMA = {
             "type": "array",
             "items": {
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "types": {
                         "type": "array",
@@ -133,7 +145,22 @@ CONFIG_SCHEMA = {
 
 SUB_CONFIG_SCHEMA = {}
 
+BANNED_SCHEMA = {
+    "type": "object",
+    "patternProperties": {
+        "^.*$": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    },
+    "additionalProperties": False,
+}
+
 BLACKLIST_SCHEMA = {"type": "array", "items": {"type": "string"}}
+
+MODERATING_SCHEMA = BLACKLIST_SCHEMA
+
+ANY_SCHEMA = {}
 
 
 ###############################
@@ -141,30 +168,9 @@ BLACKLIST_SCHEMA = {"type": "array", "items": {"type": "string"}}
 ###############################
 
 
-def _validate(instance: object, schema: object) -> Tuple[bool, "BaseException | None"]:
+def validate(instance: object, schema: object) -> "BaseException | None":
     try:
-        validate(instance, schema)
+        _validate(instance, schema)
     except jsonschema.exceptions.ValidationError as e:
-        return (False, e)
-    return (True, None)
-
-
-def validate_blacklist(instance: object) -> Tuple[bool, "BaseException | None"]:
-    return _validate(instance, BLACKLIST_SCHEMA)
-
-
-def validate_config(instance: object):
-    return _validate(instance, CONFIG_SCHEMA)
-
-
-def validate_sub_config(instance: object):
-    return _validate(instance, SUB_CONFIG_SCHEMA)
-
-
-def create_validator(
-    schema: object,
-) -> Callable[[object], Tuple[bool, "BaseException | None"]]:
-    def result(instance: object) -> Tuple[bool, "BaseException | None"]:
-        return _validate(instance, schema)
-
-    return result
+        return e
+    return None

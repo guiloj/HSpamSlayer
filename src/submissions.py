@@ -85,7 +85,7 @@ def ban_user_in_moderating(user_name: str):
     subs_banned_in = []
 
     for subreddit in reddit.user.moderator_subreddits(limit=None):  # type: ignore
-        if str(subreddit).lower() == "u_" + Secrets.username.lower():
+        if str(subreddit).lower() == f"u_{Secrets.username.lower()}":
             continue
 
         if banned.is_in(user_name, str(subreddit).lower()):
@@ -195,6 +195,9 @@ def manage_bans(thread_manager: ThreadManager):
 
             if user := ban_queue.get():
                 ban_user_in_moderating(user)
+
+            if not thread_manager.alive:
+                break
 
         except BaseException as e:
             if catch(e, logger):
