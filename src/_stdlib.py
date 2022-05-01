@@ -29,16 +29,14 @@ from _validators import (
 ############################
 
 
-ABSPATH = os.path.abspath(__file__)
-ABSDIR = p(os.path.dirname(ABSPATH))
-# os.chdir(str(ABSDIR))  # changing directory to file path to use relative paths
+ABSDIR = p(__file__).parent.absolute()
 
-_secrets_path = str(ABSDIR.joinpath("../keys/secrets.json"))
-_config_path = str(ABSDIR.joinpath("../config/config.json"))
-_subs_config_path = str(ABSDIR.joinpath("../config/subs"))
-_blacklist_path = str(ABSDIR.joinpath("../data/blacklist.json"))
-_mod_cache_path = str(ABSDIR.joinpath("../cache/moderating_subreddits.cache.json"))
-_banned_cache_path = str(ABSDIR.joinpath("../cache/banned_users.cache.json"))
+_secrets_path = ABSDIR.joinpath("../keys/secrets.json")
+_config_path = ABSDIR.joinpath("../config/config.json")
+_subs_config_path = ABSDIR.joinpath("../config/subs")
+_blacklist_path = ABSDIR.joinpath("../data/blacklist.json")
+_mod_cache_path = ABSDIR.joinpath("../cache/moderating_subreddits.cache.json")
+_banned_cache_path = ABSDIR.joinpath("../cache/banned_users.cache.json")
 
 with open(_secrets_path, "rt", encoding="utf-8") as f:
     _secrets = json.load(f)
@@ -74,13 +72,20 @@ class PrawErrors:
 class Configs:
     def __init__(
         self,
-        config_path: str = _config_path,
-        subs_path: str = _subs_config_path,
+        config_path: p = _config_path,
+        subs_path: p = _subs_config_path,
         schema: object = CONFIG_SCHEMA,
     ):
-        self.config_path = p(config_path).absolute()
+        """Creates a helper object to easily manage json style config files.
 
-        self.subs_path = p(subs_path)
+        Args:
+            config_path (Path, optional): Path to the config file. Defaults to _config_path.
+            subs_path (Path, optional): Path to the sub specific config files. Defaults to _subs_config_path.
+            schema (object, optional): Json schema for the config file (Use ANY_SCHEMA to accept any json configuration). Defaults to CONFIG_SCHEMA.
+        """
+        self.config_path = config_path.absolute()
+
+        self.subs_path = subs_path
 
         self.schema = schema
 
@@ -106,7 +111,7 @@ class Configs:
         config_path = self.config_path
 
         for config in self.subs_path.iterdir():
-            if config.name.replace(".json", "").lower() == sub.lower():
+            if raw_str_comp(config.name.replace(".json", ""), sub):
                 config_path = config
                 break
 
@@ -116,10 +121,10 @@ class Configs:
 class Banned:
     def __init__(
         self,
-        banned_cache_path: str = _banned_cache_path,
+        banned_cache_path: p = _banned_cache_path,
         schema: object = BANNED_SCHEMA,
     ):
-        self.banned_cache_path = p(banned_cache_path)
+        self.banned_cache_path = banned_cache_path
 
         self.schema = schema
 
@@ -131,7 +136,7 @@ class Banned:
             raise error
 
         for key, value in banned.items():
-            if key.lower() == user.lower():
+            if raw_str_comp(key, user):
                 return value
 
     def get(self, user: str):
@@ -158,7 +163,7 @@ class Banned:
             raise error
 
         for key in banned:
-            if key.lower() == user.lower():
+            if raw_str_comp(key, user):
 
                 banned[key] += new_subs
                 banned[key] = list(set(banned[key]))
@@ -171,7 +176,7 @@ class Banned:
 
 
 class Blacklist:
-    def __init__(self, blacklist_path: str = _blacklist_path, schema=BLACKLIST_SCHEMA):
+    def __init__(self, blacklist_path: p = _blacklist_path, schema=BLACKLIST_SCHEMA):
         self.blacklist_path = blacklist_path
         self.schema = schema
 
@@ -187,7 +192,7 @@ class Blacklist:
 
 class Moderating:
     def __init__(
-        self, mod_cache_path: str = _mod_cache_path, schema: object = MODERATING_SCHEMA
+        self, mod_cache_path: p = _mod_cache_path, schema: object = MODERATING_SCHEMA
     ):
         self.mod_cache_path = mod_cache_path
         self.schema = schema
@@ -200,8 +205,9 @@ class Moderating:
             raise error
 
         result = [
-            x.lower() for x in subs if str(x).lower() != "u_" + Secrets.username.lower()
+            x.lower() for x in subs if str(x).lower() != f"u_{Secrets.username.lower()}"
         ]
+
         if not len(result):
             with gen_reddit_instance() as r:  # it's ok to create a reddit instance here because this should only be called when the cache is empty
                 self.update(r)
@@ -230,6 +236,7 @@ _loggers: Dict[str, logging.Logger] = {}
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("prawcore").setLevel(logging.WARNING)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+# no I don't want to know about every single detail about every single request
 
 # https://stackoverflow.com/a/56944256 <= (@guiloj) credit is important kids
 class _CustomFormatter(logging.Formatter):
@@ -241,7 +248,7 @@ class _CustomFormatter(logging.Formatter):
         reset = "\x1b[0m"
         format_ = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
 
-        self.OS = os.name if not file else "nt"
+        self.OS = "nt" if file else os.name
 
         self.FORMATS = {
             logging.DEBUG: grey + format_ + reset,
@@ -262,7 +269,7 @@ class _CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def Logger(file_path: str, name: str) -> logging.Logger:
+def Logger(file_path: p, name: str) -> logging.Logger:
 
     if _loggers.get(name):
         return _loggers.get(name)  # type: ignore
@@ -276,14 +283,14 @@ def Logger(file_path: str, name: str) -> logging.Logger:
     _ch.setLevel(_configs.get("logging", "stdout_level"))
     _ch.setFormatter(_CustomFormatter())
 
-    _fh = logging.FileHandler(file_path)
+    _fh = logging.FileHandler(str(file_path))
     _fh.setLevel(_configs.get("logging", "file_level"))
     _fh.setFormatter(_CustomFormatter(True))
 
     logger.addHandler(_fh)
     logger.addHandler(_ch)
 
-    _loggers[file_path] = logger
+    _loggers[str(file_path)] = logger
 
     return logger
 
@@ -293,7 +300,7 @@ def Logger(file_path: str, name: str) -> logging.Logger:
 #######################################
 
 _configs = Configs()
-_logger = Logger(str(ABSDIR.joinpath("../logs/std.lib.log")), "StdLib")
+_logger = Logger(ABSDIR.joinpath("../logs/std.lib.log"), "StdLib")
 
 ###############################
 # ======== FUNCTIONS ======== #
@@ -352,8 +359,29 @@ def control_ratelimit(reddit: praw.reddit.Reddit):
 
 
 def gen_reddit_instance(secrets: Type[Secrets] = Secrets) -> praw.reddit.Reddit:
+    """Generate a new reddit instance.
+
+    Args:
+        secrets (Type[Secrets], optional): Secrets object used to login. Defaults to Secrets.
+
+    Returns:
+        praw.reddit.Reddit: A new reddit instance.
+    """
     reddit = praw.Reddit(**_as_dict(secrets))
     reddit._validate_on_submit = True
     # _logger.debug("Created reddit instance: %s" % reddit)
     # I'm not sure about this debug call
     return reddit
+
+
+def raw_str_comp(str1: object, str2: object) -> bool:
+    """Compare two strings without caring about case.
+
+    Args:
+        str1 (object): First string to compare.
+        str2 (object): Second string to compare.
+
+    Returns:
+        bool: True if the strings are equal, False otherwise.
+    """
+    return str(str1).lower() == str(str2).lower()

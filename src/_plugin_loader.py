@@ -30,7 +30,7 @@ sys.path.append(str(ABSDIR.joinpath("../plugins")))
 
 _configs = Configs()
 
-_logger = Logger(str(ABSDIR.joinpath("../logs/plugin.loader.log")), "PluginLoader")
+_logger = Logger(ABSDIR.joinpath("../logs/plugin.loader.log"), "PluginLoader")
 
 _plugins = _configs.get("plugins")
 

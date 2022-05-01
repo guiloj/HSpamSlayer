@@ -2,7 +2,7 @@
 # ======== IMPORTS ======== #
 #############################
 
-from typing import Callable, Tuple
+from typing import Any, Callable, Tuple
 
 import jsonschema.exceptions
 from jsonschema import validate as _validate
@@ -132,6 +132,14 @@ CONFIG_SCHEMA = {
                 "required": ["types", "script"],
             },
         },
+        "experimental": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "opt_in": {"type": "boolean"},
+                "image_recognition": {"type": "boolean"},
+            },
+        },
     },
     "required": [
         "logging",
@@ -168,7 +176,7 @@ ANY_SCHEMA = {}
 ###############################
 
 
-def validate(instance: object, schema: object) -> "BaseException | None":
+def validate(instance: object, schema: Any) -> "BaseException | None":
     try:
         _validate(instance, schema)
     except jsonschema.exceptions.ValidationError as e:

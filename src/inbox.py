@@ -37,7 +37,7 @@ ABSDIR = p(os.path.dirname(ABSPATH))
 
 
 configs = Configs()
-logger = Logger(str(ABSDIR.joinpath("../logs/inbox.log")), "Inbox")
+logger = Logger(ABSDIR.joinpath("../logs/inbox.log"), "Inbox")
 moderating = Moderating()
 blacklist = Blacklist()
 plugins = PluginLoader(["on_invite"])
@@ -147,7 +147,7 @@ def check_inbox(reddit: praw.reddit.Reddit) -> None:
                 praw.exceptions.RedditAPIException,
                 prawcore.exceptions.NotFound,
             ) as e:
-                logger.warn(
+                logger.warning(
                     "Accepting invite from r/%s failed: %s" % (unread.subreddit, e)
                 )
 
@@ -164,7 +164,7 @@ def check_inbox(reddit: praw.reddit.Reddit) -> None:
 
 
 def main():
-    """Main entry point."
+    """Main entry point.
 
     Raises:
         e: Unhandled exception.

@@ -23,6 +23,7 @@ from _stdlib import (
     control_ratelimit,
     gen_reddit_instance,
     p,
+    raw_str_comp,
 )
 from _threading_manager import BanQueue, Queue, ThreadManager, uuid
 
@@ -42,7 +43,7 @@ ban_cache_path = ABSDIR.joinpath("../cache/ban.queue")
 
 configs = Configs()
 blacklist = Blacklist()
-logger = Logger(str(ABSDIR.joinpath("../logs/submissions.log")), "Submissions")
+logger = Logger(ABSDIR.joinpath("../logs/submissions.log"), "Submissions")
 moderating = Moderating()
 plugins = PluginLoader(["on_bad_post"])
 banned = Banned()
@@ -61,6 +62,12 @@ else:
 
 
 def ban_user(subreddit: praw.models.Subreddit, user_name: str):
+    """Ban user from a subreddit.
+
+    Args:
+        subreddit (praw.models.Subreddit): The subreddit to ban a user from.
+        user_name (str): The reddit username of the user to ban.
+    """
     options = configs.get("on_bad_post", "ban_opts")
 
     options["ban_message"] = options["ban_message"] % {"subreddit": subreddit}
@@ -76,7 +83,11 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str):
 
 
 def ban_user_in_moderating(user_name: str):
+    """Ban a user from all subreddits the bot moderates if it has not been banned yet.
 
+    Args:
+        user_name (str): The reddit username of the user to ban.
+    """
     if not configs.get("on_bad_post", "ban"):
         return
 
@@ -85,7 +96,7 @@ def ban_user_in_moderating(user_name: str):
     subs_banned_in = []
 
     for subreddit in reddit.user.moderator_subreddits(limit=None):  # type: ignore
-        if str(subreddit).lower() == f"u_{Secrets.username.lower()}":
+        if raw_str_comp(subreddit, f"u_{Secrets.username.lower()}"):
             continue
 
         if banned.is_in(user_name, str(subreddit).lower()):
@@ -103,7 +114,11 @@ def ban_user_in_moderating(user_name: str):
 
 
 def remove_submission(submission: praw.models.Submission):
+    """Remove a submission from their host sub.
 
+    Args:
+        submission (praw.models.Submission): The submission to remove.
+    """
     options = configs.get("on_bad_post")
 
     if not options["remove"]:
@@ -119,6 +134,11 @@ def remove_submission(submission: praw.models.Submission):
 
 
 def pickle_queue(queue: BanQueue):
+    """Pickle a queue to a file.
+
+    Args:
+        queue (BanQueue): Queue to pickle.
+    """
     with open(ban_cache_path, "wb") as f:
         pickle.dump(queue, f)
 
@@ -126,6 +146,12 @@ def pickle_queue(queue: BanQueue):
 def check_submissions(  # sourcery no-metrics
     id_: uuid.UUID, subs_dict: Dict[uuid.UUID, List[str]], errors: Queue
 ):
+    """Check for bad submissions given a list of subreddits to monitor.
+
+    Args:
+        subs_dict (Dict[uuid.UUID, List[str]]): Dictionary containing the list of subreddits to monitor.
+        errors (Queue): Queue responsable for storing any unplanned exceptions.
+    """
     reddit = gen_reddit_instance()
 
     while 1:
@@ -158,7 +184,7 @@ def check_submissions(  # sourcery no-metrics
                             submission.author,
                         )
 
-                        if str(submission.author).lower() == str(parent.author).lower():
+                        if raw_str_comp(submission.author, parent.author):
                             ban_queue.put(str(submission.author).lower())
                             pickle_queue(ban_queue)
 
@@ -184,6 +210,11 @@ def check_submissions(  # sourcery no-metrics
 
 
 def manage_bans(thread_manager: ThreadManager):
+    """Manage bans from a thread manager in a separate thread.
+
+    Args:
+        thread_manager (ThreadManager): Any ThreadManager instance.
+    """
     while 1:
         try:
             time.sleep(60)
@@ -207,6 +238,14 @@ def manage_bans(thread_manager: ThreadManager):
 
 
 def manage_threads(thread_manager: ThreadManager):
+    """Manage all running threads given a manager.
+
+    Args:
+        thread_manager (ThreadManager): Any ThreadManager instance.
+
+    Raises:
+        SystemExit: Raised if an error occurred within the thread manager.
+    """
     while 1:
         time.sleep(120)
 
@@ -228,6 +267,7 @@ def manage_threads(thread_manager: ThreadManager):
 
 
 def main():
+    """Main entry point."""
     thread_manager = ThreadManager(check_submissions)
     thread_manager.initialize(moderating.get())
 

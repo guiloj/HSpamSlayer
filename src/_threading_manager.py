@@ -17,8 +17,7 @@ from _stdlib import Configs, Logger, p
 ############################
 
 
-ABSPATH = os.path.abspath(__file__)
-ABSDIR = p(os.path.dirname(ABSPATH))
+ABSDIR = p(__file__).parent.absolute()
 
 
 #######################################
@@ -26,9 +25,7 @@ ABSDIR = p(os.path.dirname(ABSPATH))
 #######################################
 
 _configs = Configs()
-_logger = Logger(
-    str(ABSDIR.joinpath("../logs/threading.manager.log")), "ThreadingManager"
-)
+_logger = Logger(ABSDIR.joinpath("../logs/threading.manager.log"), "ThreadingManager")
 
 #############################
 # ======== CLASSES ======== #
@@ -83,6 +80,11 @@ class ThreadManager:
         self.modding: List[str] = []
 
     def initialize(self, subs: List[str]):
+        """Initializes the thread manager with the given subs.
+
+        Args:
+            subs (List[str]): List of subs to be distributed across all running threads.
+        """
         self.modding = subs
         split = self._split_sub_list(subs)
 

@@ -27,8 +27,8 @@ sys.path.append(str(ABSDIR.joinpath("../src")))
 from _stdlib import Configs, Logger
 
 sys.stderr = sys.stdout  # just to keep stderr clean for main.py
-logger = Logger(str(ABSDIR.joinpath("../logs/webhook.log")), "WebhookPlugin")
-configs = Configs(str(ABSDIR.joinpath("../config/plugins/webhook.json")))
+logger = Logger(ABSDIR.joinpath("../logs/webhook.log"), "WebhookPlugin")
+configs = Configs(ABSDIR.joinpath("../config/plugins/webhook.json"))
 
 ###############################
 # ======== FUNCTIONS ======== #

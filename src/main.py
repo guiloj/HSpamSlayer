@@ -25,7 +25,7 @@ ABSDIR = p(os.path.dirname(ABSPATH))
 
 
 configs = Configs()
-logger = Logger(str(ABSDIR.joinpath("../logs/main.log")), "Main")
+logger = Logger(ABSDIR.joinpath("../logs/main.log"), "Main")
 plugins = PluginLoader(["on_main_critical"])
 
 
@@ -35,6 +35,7 @@ plugins = PluginLoader(["on_main_critical"])
 
 
 def main():
+    """Main entry point."""
     processes = [
         Popen(
             [sys.executable, str(ABSDIR.joinpath(script))],

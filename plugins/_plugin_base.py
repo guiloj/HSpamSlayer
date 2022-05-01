@@ -30,8 +30,8 @@ from _stdlib import (
 )
 
 sys.stderr = sys.stdout  # just to keep stderr clean for main.py
-logger = Logger(str(ABSDIR.joinpath("../logs/plugin.name.log")), "NamePlugin")
-configs = Configs(str(ABSDIR.joinpath("../config/plugins/plugin.name.json")))
+logger = Logger(ABSDIR.joinpath("../logs/plugin.name.log"), "NamePlugin")
+configs = Configs(ABSDIR.joinpath("../config/plugins/plugin.name.json"))
 blacklist = Blacklist()
 moderating = Moderating()
 

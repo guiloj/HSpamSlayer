@@ -19,6 +19,7 @@ A simple bot to help keep spam away from your _H_ subreddit.
 -   [[Setup](#setup)] - Invite the bot to mod your subreddit
 -   [[Installation](#installation)] - Install and modify your version of the bot ([GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.txt))
 -   [[Docs](./doc/)] - **RTFM!**
+-   [[TODO](./TODO.md)] - Todo list for new features
 
 # About
 
