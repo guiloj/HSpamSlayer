@@ -31,7 +31,7 @@ from _stdlib import (
 
 sys.stderr = sys.stdout  # just to keep stderr clean for main.py
 logger = Logger(ABSDIR.joinpath("../logs/plugin.name.log"), "NamePlugin")
-configs = Configs(ABSDIR.joinpath("../config/plugins/plugin.name.json"))
+configs = Configs(ABSDIR.joinpath("../config/plugins/plugin.name.json"), schema={})
 blacklist = Blacklist()
 moderating = Moderating()
 

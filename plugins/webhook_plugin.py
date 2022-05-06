@@ -28,7 +28,7 @@ from _stdlib import Configs, Logger
 
 sys.stderr = sys.stdout  # just to keep stderr clean for main.py
 logger = Logger(ABSDIR.joinpath("../logs/webhook.log"), "WebhookPlugin")
-configs = Configs(ABSDIR.joinpath("../config/plugins/webhook.json"))
+configs = Configs(ABSDIR.joinpath("../config/plugins/webhook.json"), schema={})
 
 ###############################
 # ======== FUNCTIONS ======== #
