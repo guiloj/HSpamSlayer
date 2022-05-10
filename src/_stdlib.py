@@ -358,6 +358,18 @@ def control_ratelimit(reddit: praw.reddit.Reddit):
         return
 
 
+def json_escape_string(object_: Any) -> str:
+    """Escape a string for JSON serialization.
+
+    Args:
+        object_ (Any): Any object that can be turned into a string.
+
+    Returns:
+        str: The formatted string.
+    """
+    return str(object_).replace('"', "").replace("\n", "\\n")
+
+
 def gen_reddit_instance(secrets: Type[Secrets] = Secrets) -> praw.reddit.Reddit:
     """Generate a new reddit instance.
 

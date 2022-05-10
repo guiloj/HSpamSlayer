@@ -8,7 +8,7 @@ import time
 from subprocess import PIPE, Popen
 
 from _plugin_loader import PluginLoader
-from _stdlib import Configs, Logger, p
+from _stdlib import Configs, Logger, json_escape_string, p
 
 ############################
 # ======== PATHS ========= #
@@ -69,9 +69,9 @@ def main():
 
                     plugins.on(
                         "on_main_critical",
-                        file_name=file_name,
+                        file_name=json_escape_string(file_name).split("/")[-1],
                         exit_code=exit_code,
-                        error=error,
+                        error=json_escape_string(error),
                     )
 
             if not len(processes):

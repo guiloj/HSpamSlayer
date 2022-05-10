@@ -34,6 +34,6 @@
     -   [ ] Normalize imports with all scripts
     -   [ ] Normalize naming methods for all variables, functions and classes
     -   [ ] Add docstrings to all classes and functions
--   [x] Kill all threads when a critical unexpected error was raised. **[fix]**
+-   [x] (ACTUALLY) Kill all threads when a critical unexpected error was raised **[fix]**
 -   [ ] Update Pipfile and requirements.txt files before pushing to `master`
 -   [ ] Test new features and fixes **(important)**

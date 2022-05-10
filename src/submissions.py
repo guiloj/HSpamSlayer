@@ -164,11 +164,11 @@ def check_submissions(  # sourcery no-metrics
             )
 
             for submission in submission_stream:
-
+                time.sleep(20)
                 control_ratelimit(reddit)
 
                 if submission is None:
-                    time.sleep(10)
+                    time.sleep(20)
                     continue
 
                 if hasattr(submission, "crosspost_parent"):
@@ -209,34 +209,6 @@ def check_submissions(  # sourcery no-metrics
             continue
 
 
-def manage_bans(thread_manager: ThreadManager):
-    """Manage bans from a thread manager in a separate thread.
-
-    Args:
-        thread_manager (ThreadManager): Any ThreadManager instance.
-    """
-    while 1:
-        try:
-            time.sleep(60)
-
-            if ban_queue.is_empty():
-                if ban_cache_path.exists():
-                    ban_cache_path.unlink(True)
-                continue
-
-            if user := ban_queue.get():
-                ban_user_in_moderating(user)
-
-            if not thread_manager.alive:
-                break
-
-        except BaseException as e:
-            if catch(e, logger):
-                thread_manager.errors.put(e)
-                break
-            continue
-
-
 def manage_threads(thread_manager: ThreadManager):
     """Manage all running threads given a manager.
 
@@ -247,6 +219,7 @@ def manage_threads(thread_manager: ThreadManager):
         SystemExit: Raised if an error occurred within the thread manager.
     """
     while 1:
+
         time.sleep(120)
 
         new_modded = moderating.get()
@@ -257,6 +230,16 @@ def manage_threads(thread_manager: ThreadManager):
 
         if error is not None:
             raise SystemExit("Unplanned SystemExit: %s" % error)
+
+        # ban users
+
+        if ban_queue.is_empty():
+            if ban_cache_path.exists():
+                ban_cache_path.unlink(True)
+            continue
+
+        if user := ban_queue.get():
+            ban_user_in_moderating(user)
 
         thread_manager.check_running()
 
@@ -270,8 +253,6 @@ def main():
     """Main entry point."""
     thread_manager = ThreadManager(check_submissions)
     thread_manager.initialize(moderating.get())
-
-    threading.Thread(target=manage_bans, args=(thread_manager,)).start()
 
     manage_threads(thread_manager)
     return

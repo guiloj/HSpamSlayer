@@ -4,7 +4,6 @@
 
 import ctypes
 import inspect
-import os
 import threading
 import uuid
 from queue import Queue
@@ -153,7 +152,7 @@ class ThreadManager:
             Type[BaseException]
         """
         if self.errors.empty():
-            return
+            return None
 
         error = self.errors.get()
 

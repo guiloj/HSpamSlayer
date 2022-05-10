@@ -23,7 +23,7 @@ _(built for discord webhooks)_
     "webhook": "",
     "messages": {
         "on_invite": {},
-        "main_critical": {}
+        "on_main_critical": {}
     }
 }
 ```
