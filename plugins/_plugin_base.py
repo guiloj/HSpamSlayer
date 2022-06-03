@@ -20,20 +20,13 @@ sys.path.append(str(ABSDIR.joinpath("../src")))
 # ======== INSTACES ======== #
 ##############################
 
-from _stdlib import (
-    Blacklist,
-    Configs,
-    Logger,
-    Moderating,
-    control_ratelimit,
-    gen_reddit_instance,
-)
+import _stdlib as std
 
 sys.stderr = sys.stdout  # just to keep stderr clean for main.py
-logger = Logger(ABSDIR.joinpath("../logs/plugin.name.log"), "NamePlugin")
-configs = Configs(ABSDIR.joinpath("../config/plugins/plugin.name.json"), schema={})
-blacklist = Blacklist()
-moderating = Moderating()
+logger = std.Logger(ABSDIR.joinpath("../logs/plugin.name.log"), "NamePlugin")
+configs = std.Configs(ABSDIR.joinpath("../config/plugins/plugin.name.json"), schema={})
+blacklist = std.Blacklist()
+moderating = std.Moderating()
 
 ##########################
 # ======== MAIN ======== #
@@ -42,7 +35,7 @@ moderating = Moderating()
 
 def main(type_: str, **kwargs):
     reddit = (
-        gen_reddit_instance()
+        std.gen_reddit_instance()
     )  # if you don't plan to use mod privleges pass an _stdlib.Secrets instance to another reddit account.
     #    if you don't plan to use praw at all remove the call to this function.
 

@@ -7,10 +7,11 @@ import os
 import sys
 import threading
 import time
+from pathlib import Path as p
 from types import ModuleType
 from typing import Dict, List, Tuple
 
-from _stdlib import Configs, Logger, p
+import _stdlib as std
 
 ############################
 # ======== PATHS ========= #
@@ -28,11 +29,11 @@ sys.path.append(str(ABSDIR.joinpath("../plugins")))
 #######################################
 
 
-_configs = Configs()
+_configs = std.Configs()
 
-_logger = Logger(ABSDIR.joinpath("../logs/plugin.loader.log"), "PluginLoader")
+_logger = std.Logger(ABSDIR.joinpath("../logs/plugin.loader.log"), "PluginLoader")
 
-_plugins = _configs.get("plugins")
+_plugins = _configs.get("plugins").unwrap()
 
 
 ###########################

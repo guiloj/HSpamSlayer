@@ -2,7 +2,7 @@
 # ======== IMPORTS ======== #
 #############################
 
-from typing import Any, Callable, Tuple
+from typing import Any
 
 import jsonschema.exceptions
 from jsonschema import validate as _validate
@@ -177,6 +177,15 @@ ANY_SCHEMA = {}
 
 
 def validate(instance: object, schema: Any) -> "BaseException | None":
+    """Validate json object with a schema.
+
+    Args:
+        instance (object): The json object to validate.
+        schema (Any): The schema to validate against.
+
+    Returns:
+        BaseException | None: The exception if the validation fails, None otherwise.
+    """
     try:
         _validate(instance, schema)
     except jsonschema.exceptions.ValidationError as e:

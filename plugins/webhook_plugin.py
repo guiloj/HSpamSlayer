@@ -24,11 +24,11 @@ sys.path.append(str(ABSDIR.joinpath("../src")))
 # ======== INSTACES ======== #
 ##############################
 
-from _stdlib import Configs, Logger
+import _stdlib as std
 
 sys.stderr = sys.stdout  # just to keep stderr clean for main.py
-logger = Logger(ABSDIR.joinpath("../logs/webhook.log"), "WebhookPlugin")
-configs = Configs(ABSDIR.joinpath("../config/plugins/webhook.json"), schema={})
+logger = std.Logger(ABSDIR.joinpath("../logs/webhook.log"), "WebhookPlugin")
+configs = std.Configs(ABSDIR.joinpath("../config/plugins/webhook.json"), schema={})
 
 ###############################
 # ======== FUNCTIONS ======== #
@@ -58,7 +58,7 @@ def send_to_webhook(data: dict) -> int:
     Returns:
         int: Status code.
     """
-    webhook = configs.get("webhook")
+    webhook = configs.get("webhook").unwrap()
     response = requests.post(
         webhook,
         json=data,
@@ -73,7 +73,7 @@ def send_to_webhook(data: dict) -> int:
 
 
 def main(type_: str, **kwargs):
-    message = format_webhook(configs.get("messages", type_), **kwargs)
+    message = format_webhook(configs.get("messages", type_).unwrap(), **kwargs)
     response = send_to_webhook(message)
 
     # 204 is the default response for a discord webhook - https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/204

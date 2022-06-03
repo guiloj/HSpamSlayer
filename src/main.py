@@ -5,10 +5,11 @@
 import os
 import sys
 import time
+from pathlib import Path as p
 from subprocess import PIPE, Popen
 
+import _stdlib as std
 from _plugin_loader import PluginLoader
-from _stdlib import Configs, Logger, json_escape_string, p
 
 ############################
 # ======== PATHS ========= #
@@ -24,8 +25,8 @@ ABSDIR = p(os.path.dirname(ABSPATH))
 ###############################
 
 
-configs = Configs()
-logger = Logger(ABSDIR.joinpath("../logs/main.log"), "Main")
+configs = std.Configs()
+logger = std.Logger(ABSDIR.joinpath("../logs/main.log"), "Main")
 plugins = PluginLoader(["on_main_critical"])
 
 
@@ -42,7 +43,7 @@ def main():
             stdout=sys.stdout,
             stderr=PIPE,
         )
-        for script in configs.get("main.py", "scripts")
+        for script in configs.get("main.py", "scripts").unwrap()
         if not script.startswith("_")
     ]
 
@@ -69,9 +70,9 @@ def main():
 
                     plugins.on(
                         "on_main_critical",
-                        file_name=json_escape_string(file_name).split("/")[-1],
+                        file_name=std.json_escape_string(file_name).split("/")[-1],
                         exit_code=exit_code,
-                        error=json_escape_string(error),
+                        error=std.json_escape_string(error),
                     )
 
             if not len(processes):

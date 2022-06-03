@@ -15,14 +15,8 @@ from typing import Any, Dict, List, Tuple, Type
 import praw
 import prawcore
 
-from _validators import (
-    BANNED_SCHEMA,
-    BLACKLIST_SCHEMA,
-    CONFIG_SCHEMA,
-    MODERATING_SCHEMA,
-    SUB_CONFIG_SCHEMA,
-    validate,
-)
+import _rust_types as rt
+import _validators as val
 
 ############################
 # ======== PATHS ========= #
@@ -47,8 +41,10 @@ with open(_secrets_path, "rt", encoding="utf-8") as f:
 ##########################
 
 
-@dataclass
+@dataclass(frozen=True)
 class Secrets:
+    """A frozen and typed representation for praw's Reddit secrets."""
+
     client_id: str = _secrets["client_id"]
     client_secret: str = _secrets["client_secret"]
     password: str = _secrets["password"]
@@ -56,8 +52,10 @@ class Secrets:
     username: str = _secrets["username"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class PrawErrors:
+    """A frozen and typed representation for praw's errors with criticality layers."""
+
     Critical: Tuple[Type[BaseException], ...] = (
         prawcore.exceptions.Forbidden,
         prawcore.exceptions.NotFound,
@@ -69,12 +67,21 @@ class PrawErrors:
     SysExit: Tuple[Type[BaseException], ...] = (BaseException,)
 
 
+class Result:
+    pass
+
+
+#############################
+# ======== CLASSES ======== #
+#############################
+
+
 class Configs:
     def __init__(
         self,
         config_path: p = _config_path,
         subs_path: p = _subs_config_path,
-        schema: object = CONFIG_SCHEMA,
+        schema: object = val.CONFIG_SCHEMA,
     ):
         """Creates a helper object to easily manage json style config files.
 
@@ -89,11 +96,11 @@ class Configs:
 
         self.schema = schema
 
-    def _get(self, path: "str | p", *keys, schema=None):
+    def _get(self, path: "str | p", *keys, schema=None) -> rt.Option[Any]:
         with open(path, "rt", encoding="utf-8") as f:
             configs: Dict[str, Any] = json.load(f)
 
-        if error := validate(configs, self.schema if schema is None else schema):
+        if error := val.validate(configs, self.schema if schema is None else schema):
             raise error
 
         try:
@@ -101,13 +108,22 @@ class Configs:
                 configs = configs[key]
         except (KeyError, IndexError) as e:
             _logger.error("Invalid path for dictionary object!")
-            return None
-        return configs
+            return rt.Nothing()
+        return rt.Some(configs)
 
-    def get(self, *keys) -> Any:
+    def get(self, *keys):
+        """Gets a config value from the config file."""
         return self._get(self.config_path, *keys)
 
-    def get_sub(self, sub: str, *keys) -> Any:
+    def get_sub(self, sub: str, *keys):
+        """Gets a config value from a sub specific config file.
+
+        Args:
+            sub (str): Subreddit's name.
+
+        Returns:
+            Any: Config value. Defaults to normal config file.
+        """
         config_path = self.config_path
 
         for config in self.subs_path.iterdir():
@@ -115,15 +131,21 @@ class Configs:
                 config_path = config
                 break
 
-        return self._get(config_path, *keys, SUB_CONFIG_SCHEMA)
+        return self._get(config_path, *keys, val.SUB_CONFIG_SCHEMA)
 
 
-class Banned:
+class Banned:  # TODO: use rust_types
     def __init__(
         self,
         banned_cache_path: p = _banned_cache_path,
-        schema: object = BANNED_SCHEMA,
+        schema: object = val.BANNED_SCHEMA,
     ):
+        """Create a helper object for managing banned users.
+
+        Args:
+            banned_cache_path (p, optional): The path to the banned users cache file. Defaults to _banned_cache_path.
+            schema (object, optional): A schema object to validate against. Defaults to val.BANNED_SCHEMA.
+        """
         self.banned_cache_path = banned_cache_path
 
         self.schema = schema
@@ -132,7 +154,7 @@ class Banned:
         with open(self.banned_cache_path, "rt", encoding="utf-8") as f:
             banned: Dict[str, List[str]] = json.load(f)
 
-        if error := validate(banned, self.schema if schema is None else schema):
+        if error := val.validate(banned, self.schema if schema is None else schema):
             raise error
 
         for key, value in banned.items():
@@ -140,10 +162,19 @@ class Banned:
                 return value
 
     def get(self, user: str):
+        """Gets a user's banned subreddits."""
         return self._get(user)
 
     def is_in(self, user: str, subreddit: str):
+        """If a user is banned in a subreddit
 
+        Args:
+            user (str): The user to check.
+            subreddit (str): The subreddit to check.
+
+        Returns:
+            _type_: _description_
+        """
         banned_in = self._get(user)
 
         if banned_in is None:
@@ -155,11 +186,21 @@ class Banned:
         return False
 
     def add(self, user: str, new_subs: List[str], schema=None):
+        """Adds the subreddits a user was banned in to the banned cache file.
+
+        Args:
+            user (str): User that was banned.
+            new_subs (List[str]): List of subreddits that the user was banned in.
+            schema (_type_, optional): A schema object to validate against. Defaults to None.
+
+        Raises:
+            error: A validation error if the schema is not valid.
+        """
         # sourcery skip: use-dict-items
         with open(self.banned_cache_path, "rt", encoding="utf-8") as f:
             banned: Dict[str, List[str]] = json.load(f)
 
-        if error := validate(banned, self.schema if schema is None else schema):
+        if error := val.validate(banned, self.schema if schema is None else schema):
             raise error
 
         for key in banned:
@@ -176,15 +217,34 @@ class Banned:
 
 
 class Blacklist:
-    def __init__(self, blacklist_path: p = _blacklist_path, schema=BLACKLIST_SCHEMA):
+    def __init__(
+        self, blacklist_path: p = _blacklist_path, schema=val.BLACKLIST_SCHEMA
+    ):
+        """Create a helper object for managing blacklisted subreddits.
+
+        Args:
+            blacklist_path (p, optional): The path to the blacklist file. Defaults to _blacklist_path.
+            schema (object, optional): A schema object to validate against. Defaults to val.BLACKLIST_SCHEMA.
+        """
         self.blacklist_path = blacklist_path
         self.schema = schema
 
     def get(self, schema=None) -> List[str]:
+        """Get a list of all blacklisted subreddits.
+
+        Args:
+            schema (object, optional): A schema object to validate against. Defaults to None.
+
+        Raises:
+            error: A validation error if the schema is not valid.
+
+        Returns:
+            List[str]: A list of all blacklisted subreddits.
+        """
         with open(self.blacklist_path, "rt", encoding="utf-8") as f:
             blacklist: List[str] = json.load(f)
 
-        if error := validate(blacklist, self.schema if schema is None else schema):
+        if error := val.validate(blacklist, self.schema if schema is None else schema):
             raise error
 
         return [sub.lower() for sub in blacklist]
@@ -192,16 +252,35 @@ class Blacklist:
 
 class Moderating:
     def __init__(
-        self, mod_cache_path: p = _mod_cache_path, schema: object = MODERATING_SCHEMA
+        self,
+        mod_cache_path: p = _mod_cache_path,
+        schema: object = val.MODERATING_SCHEMA,
     ):
+        """Create a helper object for managing moderated subreddits.
+
+        Args:
+            mod_cache_path (p, optional): The path to the moderation cache file. Defaults to _mod_cache_path.
+            schema (object, optional): A schema object to validate against. Defaults to val.MODERATING_SCHEMA.
+        """
         self.mod_cache_path = mod_cache_path
         self.schema = schema
 
     def get(self, schema=None) -> List[str]:
+        """Get a list of all subreddits that the bot moderates.
+
+        Args:
+            schema (object, optional): A schema object to validate against. Defaults to None.
+
+        Raises:
+            error: A validation error if the schema is not valid.
+
+        Returns:
+            List[str]: A list of all moderated subreddits.
+        """
         with open(self.mod_cache_path, "rt", encoding="utf-8") as f:
             subs = json.load(f)
 
-        if error := validate(subs, self.schema if schema is None else schema):
+        if error := val.validate(subs, self.schema if schema is None else schema):
             raise error
 
         result = [
@@ -217,7 +296,7 @@ class Moderating:
         return result
 
     def update(self, reddit: praw.reddit.Reddit) -> None:
-
+        """Updates the cache of subreddits the bot moderates."""
         modded_subs = [str(x) for x in reddit.user.moderator_subreddits(limit=None)]  # type: ignore
 
         with open(self.mod_cache_path, "wt", encoding="utf-8") as f:
@@ -270,6 +349,15 @@ class _CustomFormatter(logging.Formatter):
 
 
 def Logger(file_path: p, name: str) -> logging.Logger:
+    """Create a new logger instance.
+
+    Args:
+        file_path (p): The path to the log file.
+        name (str): The name of the logger.
+
+    Returns:
+        logging.Logger: Resulting logger instance.
+    """
 
     if _loggers.get(name):
         return _loggers.get(name)  # type: ignore
@@ -280,11 +368,11 @@ def Logger(file_path: p, name: str) -> logging.Logger:
 
     # create console handler with a higher log level
     _ch = logging.StreamHandler(sys.stdout)
-    _ch.setLevel(_configs.get("logging", "stdout_level"))
+    _ch.setLevel(_configs.get("logging", "stdout_level").unwrap())
     _ch.setFormatter(_CustomFormatter())
 
     _fh = logging.FileHandler(str(file_path))
-    _fh.setLevel(_configs.get("logging", "file_level"))
+    _fh.setLevel(_configs.get("logging", "file_level").unwrap())
     _fh.setFormatter(_CustomFormatter(True))
 
     logger.addHandler(_fh)
@@ -308,7 +396,15 @@ _logger = Logger(ABSDIR.joinpath("../logs/std.lib.log"), "StdLib")
 
 
 def catch(error: BaseException, logger: logging.Logger) -> int:
+    """Catch common errors derived from praw and return 1 if the error was critical and 0 if not.
 
+    Args:
+        error (BaseException): The exception that occurred.
+        logger (logging.Logger): A logger to log the error to.
+
+    Returns:
+        int: 1 if the error was critical and 0 if not.
+    """
     if isinstance(error, PrawErrors.Critical):
         logger.critical(
             "Critical error ocurred: %s : %s" % (type(error).__name__, error)
@@ -336,6 +432,11 @@ def _as_dict(obj: object):
 
 
 def control_ratelimit(reddit: praw.reddit.Reddit):
+    """Control the ratelimit of a reddit instance.
+
+    Args:
+        reddit (praw.reddit.Reddit): The reddit instance to control.
+    """
     limit = reddit.auth.limits
 
     requests_left = (

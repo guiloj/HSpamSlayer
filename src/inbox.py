@@ -4,23 +4,15 @@
 
 import os
 import time
+from pathlib import Path as p
 
 import praw
 import praw.exceptions
 import praw.models
 import prawcore
 
+import _stdlib as std
 from _plugin_loader import PluginLoader
-from _stdlib import (
-    Blacklist,
-    Configs,
-    Logger,
-    Moderating,
-    catch,
-    control_ratelimit,
-    gen_reddit_instance,
-    p,
-)
 
 ############################
 # ======== PATHS ========= #
@@ -36,10 +28,10 @@ ABSDIR = p(os.path.dirname(ABSPATH))
 ###############################
 
 
-configs = Configs()
-logger = Logger(ABSDIR.joinpath("../logs/inbox.log"), "Inbox")
-moderating = Moderating()
-blacklist = Blacklist()
+configs = std.Configs()
+logger = std.Logger(ABSDIR.joinpath("../logs/inbox.log"), "Inbox")
+moderating = std.Moderating()
+blacklist = std.Blacklist()
 plugins = PluginLoader(["on_invite"])
 
 
@@ -54,7 +46,7 @@ def send_message_to_subreddit(subreddit: praw.models.Subreddit) -> None:
     Args:
         subreddit (praw.models.Subreddit)
     """
-    options = configs.get("on_invite")
+    options = configs.get("on_invite").unwrap()
 
     if not options["send_message"]:
         return
@@ -89,7 +81,7 @@ def make_sticky_announcement(subreddit: praw.models.Subreddit) -> None:
         subreddit (praw.models.Subreddit)
     """
 
-    options = configs.get("on_invite")
+    options = configs.get("on_invite").unwrap()
 
     if (not options["make_announcement"]) or (not can_make_sticky_post(subreddit)):
         return
@@ -123,12 +115,15 @@ def check_inbox(reddit: praw.reddit.Reddit) -> None:
     inbox = reddit.inbox.unread(limit=None)  # type: ignore
 
     for unread in inbox:
-        control_ratelimit(reddit)
+        std.control_ratelimit(reddit)
 
         if isinstance(unread, praw.models.SubredditMessage):
 
             if str(unread.subreddit).lower() in (
-                [x.lower() for x in configs.get("on_invite", "ignore")]
+                [
+                    x.lower()
+                    for x in configs.get("on_invite", "ignore").unwrap_or_default([])
+                ]
                 + blacklist.get()
             ):
                 continue
@@ -172,7 +167,7 @@ def main():
 
     error = BaseException("Exception was not registered!")
 
-    reddit = gen_reddit_instance()
+    reddit = std.gen_reddit_instance()
 
     while 1:
         try:
@@ -180,7 +175,7 @@ def main():
         except KeyboardInterrupt:
             break
         except BaseException as e:
-            if catch(e, logger):
+            if std.catch(e, logger):
                 error = e
                 break
             continue

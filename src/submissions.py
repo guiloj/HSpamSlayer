@@ -4,27 +4,15 @@
 
 import os
 import pickle
-import threading
 import time
+from pathlib import Path as p
 from typing import Dict, List
 
 import praw
 import praw.models
 
+import _stdlib as std
 from _plugin_loader import PluginLoader
-from _stdlib import (
-    Banned,
-    Blacklist,
-    Configs,
-    Logger,
-    Moderating,
-    Secrets,
-    catch,
-    control_ratelimit,
-    gen_reddit_instance,
-    p,
-    raw_str_comp,
-)
 from _threading_manager import BanQueue, Queue, ThreadManager, uuid
 
 ###########################
@@ -41,12 +29,12 @@ ban_cache_path = ABSDIR.joinpath("../cache/ban.queue")
 ###############################
 
 
-configs = Configs()
-blacklist = Blacklist()
-logger = Logger(ABSDIR.joinpath("../logs/submissions.log"), "Submissions")
-moderating = Moderating()
+configs = std.Configs()
+blacklist = std.Blacklist()
+logger = std.Logger(ABSDIR.joinpath("../logs/submissions.log"), "Submissions")
+moderating = std.Moderating()
 plugins = PluginLoader(["on_bad_post"])
-banned = Banned()
+banned = std.Banned()
 
 
 if ban_cache_path.exists():
@@ -68,7 +56,7 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str):
         subreddit (praw.models.Subreddit): The subreddit to ban a user from.
         user_name (str): The reddit username of the user to ban.
     """
-    options = configs.get("on_bad_post", "ban_opts")
+    options = configs.get("on_bad_post", "ban_opts").unwrap()
 
     options["ban_message"] = options["ban_message"] % {"subreddit": subreddit}
 
@@ -91,18 +79,18 @@ def ban_user_in_moderating(user_name: str):
     if not configs.get("on_bad_post", "ban"):
         return
 
-    reddit = gen_reddit_instance()
+    reddit = std.gen_reddit_instance()
 
     subs_banned_in = []
 
     for subreddit in reddit.user.moderator_subreddits(limit=None):  # type: ignore
-        if raw_str_comp(subreddit, f"u_{Secrets.username.lower()}"):
+        if std.raw_str_comp(subreddit, f"u_{std.Secrets.username.lower()}"):
             continue
 
         if banned.is_in(user_name, str(subreddit).lower()):
             continue
 
-        control_ratelimit(reddit)
+        std.control_ratelimit(reddit)
 
         ban_user(subreddit, user_name)
 
@@ -119,7 +107,7 @@ def remove_submission(submission: praw.models.Submission):
     Args:
         submission (praw.models.Submission): The submission to remove.
     """
-    options = configs.get("on_bad_post")
+    options = configs.get("on_bad_post").unwrap()
 
     if not options["remove"]:
         return
@@ -150,9 +138,9 @@ def check_submissions(  # sourcery no-metrics
 
     Args:
         subs_dict (Dict[uuid.UUID, List[str]]): Dictionary containing the list of subreddits to monitor.
-        errors (Queue): Queue responsable for storing any unplanned exceptions.
+        errors (Queue): Queue responsible for storing any unplanned exceptions.
     """
-    reddit = gen_reddit_instance()
+    reddit = std.gen_reddit_instance()
 
     while 1:
         try:
@@ -165,7 +153,7 @@ def check_submissions(  # sourcery no-metrics
 
             for submission in submission_stream:
                 time.sleep(20)
-                control_ratelimit(reddit)
+                std.control_ratelimit(reddit)
 
                 if submission is None:
                     time.sleep(20)
@@ -184,7 +172,7 @@ def check_submissions(  # sourcery no-metrics
                             submission.author,
                         )
 
-                        if raw_str_comp(submission.author, parent.author):
+                        if std.raw_str_comp(submission.author, parent.author):
                             ban_queue.put(str(submission.author).lower())
                             pickle_queue(ban_queue)
 
@@ -203,7 +191,7 @@ def check_submissions(  # sourcery no-metrics
                     break
 
         except BaseException as e:
-            if catch(e, logger):
+            if std.catch(e, logger):
                 errors.put(e)
                 break
             continue

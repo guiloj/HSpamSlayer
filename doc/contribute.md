@@ -23,7 +23,8 @@
 
 -   You must always respect others.
 -   You must always make your functions [statically typed](https://docs.python.org/3/library/typing.html):
-    ```py
+
+    ````py
     def foo(bar: str) -> str:
         """
         Add the string `bar` to the end of the string "foo: " and return it.
@@ -41,25 +42,9 @@
         ```
         """
         return f'foo: {bar}'
-    ```
+    ````
+
 -   You should try your best to write readable code.
--   You should follow the comment rules on top of the file:
-
-    ```py
-    """
-        @comments
-        '?': why is this code here?
-        '*': what is the code doing
-        '!': warning!
-        'NOTE': a note
-
-        @dev
-        'TODO': todo notes
-        'FIXME': needs fixing
-        'XXX': makes no sense but works
-    """
-    ```
-
 -   You are invited to add your name to comments like so:
     ```py
     # XXX: (@guiloj) wtf?

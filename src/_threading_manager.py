@@ -6,10 +6,11 @@ import ctypes
 import inspect
 import threading
 import uuid
+from pathlib import Path as p
 from queue import Queue
 from typing import Any, Callable, Dict, List, Tuple
 
-from _stdlib import Configs, Logger, p
+import _stdlib as std
 
 ############################
 # ======== PATHS ========= #
@@ -23,8 +24,10 @@ ABSDIR = p(__file__).parent.absolute()
 # ======== PRIVATE INSTANCES ======== #
 #######################################
 
-_configs = Configs()
-_logger = Logger(ABSDIR.joinpath("../logs/threading.manager.log"), "ThreadingManager")
+_configs = std.Configs()
+_logger = std.Logger(
+    ABSDIR.joinpath("../logs/threading.manager.log"), "ThreadingManager"
+)
 
 #############################
 # ======== CLASSES ======== #
@@ -36,11 +39,18 @@ class StreamThread(threading.Thread):
     def __init__(
         self, target: Callable[[Any], Any], args: "List | Tuple", id_: uuid.UUID
     ):
+        """Create a new killable StreamThread instance.
+
+        Args:
+            target (Callable[[Any], Any]): Target function.
+            args (List | Tuple): Function arguments in a list.
+            id_ (uuid.UUID): Unique identifier for the thread.
+        """
         super().__init__(target=target, args=args)
         self.id = id_
 
     def _get_my_tid(self):
-        """determines this (self's) thread id"""
+        """Determines this (self's) thread id."""
         if not self.is_alive():
             raise threading.ThreadError("the thread is not active")
 
@@ -56,13 +66,12 @@ class StreamThread(threading.Thread):
 
         raise AssertionError("could not determine the thread's id")
 
-    def raise_exc(self, exctype):
-        """raises the given exception type in the context of this thread"""
-        _async_raise(self._get_my_tid(), exctype)
+    def raise_exc(self, exc_type):
+        """Raises the given exception type in the context of this thread."""
+        _async_raise(self._get_my_tid(), exc_type)
 
     def terminate(self):
-        """raises SystemExit in the context of the given thread, which should
-        cause the thread to exit silently (unless caught)"""
+        """Raises SystemExit in the context of the given thread, which should cause the thread to exit silently (unless caught)."""
         self.raise_exc(SystemExit)
 
 
@@ -118,7 +127,7 @@ class ThreadManager:
             _logger.info(f"Started modding: {difference[1]}")
             to_add = difference[1]
 
-            limit = _configs.get("threading", "max_subs_per_thread")
+            limit = _configs.get("threading", "max_subs_per_thread").unwrap()
 
             for thread in self.running:
                 if (length := len(self.thread_dict[thread.id])) < limit:
@@ -222,7 +231,7 @@ class ThreadManager:
         Returns:
             Tuple[List[str], List[str]]: The list of elements that can fit in a list already filled by `filled` items and limited by `std.LIMIT`, the remainder.
         """
-        limit = _configs.get("threading", "max_subs_per_thread")
+        limit = _configs.get("threading", "max_subs_per_thread").unwrap()
         return (
             [x for idx, x in enumerate(new) if idx < limit - filled],
             [x for idx, x in enumerate(new) if idx >= limit - filled],
@@ -237,25 +246,32 @@ class ThreadManager:
         Returns:
             List[List[str]]: The now splitted list.
         """
-        limit = _configs.get("threading", "max_subs_per_thread")
+        limit = _configs.get("threading", "max_subs_per_thread").unwrap()
         return [subs[x : x + limit] for x in range(0, len(subs), limit)]
 
 
 class BanQueue:
     def __init__(self):
-        self._queue: List[str] = []
+        """Initializes the ban queue."""
+        self.__queue: List[str] = []
 
     def put(self, obj: Any):
-        self._queue.append(obj)
+        """Adds an object to the queue."""
+        self.__queue.append(obj)
 
     def get(self) -> "str | None":
-        return self._queue.pop(0) if len(self._queue) else None
+        """Gets the first object in the queue and returns it."""
+        return (
+            self.__queue.pop(0) if len(self.__queue) else None
+        )  # would be better to make a MISSING type but this is fine for now
 
     def is_empty(self):
-        return not len(self._queue)
+        """Checks if the queue is empty."""
+        return not len(self.__queue)
 
     def is_full(self):
-        return len(self._queue)
+        """Checks if the queue is full. Returns length of queue."""
+        return len(self.__queue)
 
 
 ###############################
@@ -271,18 +287,18 @@ def _list_diff(list_: list, other: list) -> Tuple[List[Any], List[Any]]:
         other (list): list number 2
 
     Returns:
-        Tuple[list]: Difference between the two lists. `[0]` == `list_` - `other`, `[1]` == `other` - `list_`
+        Tuple[list]: Difference between the two lists. `[0]` = `list_` - `other`, `[1]` = `other` - `list_`
     """
     return ([x for x in list_ if x not in other], [x for x in other if x not in list_])
 
 
-def _async_raise(tid, exctype):
+def _async_raise(tid, exc_type):
     """Raises the exception, performs cleanup if needed."""
     # cspell: disable-next-line
-    if not inspect.isclass(exctype):
+    if not inspect.isclass(exc_type):
         raise TypeError("Only types can be raised (not instances)")
     res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        ctypes.c_long(tid), ctypes.py_object(exctype)
+        ctypes.c_long(tid), ctypes.py_object(exc_type)
     )
     if res == 0:
         raise ValueError("invalid thread id")
