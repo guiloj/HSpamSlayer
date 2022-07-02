@@ -8,9 +8,10 @@ import logging
 import os
 import sys
 import time
+from asyncio.log import logger
 from dataclasses import dataclass
 from pathlib import Path as p  # normalize paths between every OS
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Callable, Dict, List, Tuple, Type
 
 import praw
 import prawcore
@@ -107,7 +108,7 @@ class Configs:
             for key in keys:
                 configs = configs[key]
         except (KeyError, IndexError) as e:
-            _logger.error("Invalid path for dictionary object!")
+            _logger.error("Invalid path for dictionary object: %s" % e)
             return rt.Nothing()
         return rt.Some(configs)
 
@@ -131,7 +132,30 @@ class Configs:
                 config_path = config
                 break
 
-        return self._get(config_path, *keys, val.SUB_CONFIG_SCHEMA)
+        try:
+            return self._get(config_path, *keys, val.SUB_CONFIG_SCHEMA)
+        except Exception as e:
+            logger.critical(
+                "Failed to validate configuration file for r/%s: %s" % (sub, e)
+            )
+            return self._get(self.config_path, *keys)
+
+    def get_both(self, sub: str, *keys) -> rt.Option[Any]:
+        """Gets a config value from a sub specific config file and completes it with the default config file.
+
+        Args:
+            sub (str): Subreddit's name.
+
+        Returns:
+            Any: Config value. Defaults to normal config file.
+        """
+        normal_conf = self.get(*keys)
+        sub_conf = self.get_sub(sub, *keys)
+
+        if isinstance(sub_conf, rt.Some) or isinstance(normal_conf, rt.Some):
+            return rt.Some(dict_overwrite(normal_conf.unwrap(), sub_conf.unwrap()))
+        else:
+            return rt.Nothing()
 
 
 class Banned:  # TODO: use rust_types
@@ -395,7 +419,7 @@ _logger = Logger(ABSDIR.joinpath("../logs/std.lib.log"), "StdLib")
 ###############################
 
 
-def catch(error: BaseException, logger: logging.Logger) -> int:
+def catch(error: BaseException, logger: logging.Logger) -> Tuple[int, Callable, str]:
     """Catch common errors derived from praw and return 1 if the error was critical and 0 if not.
 
     Args:
@@ -406,24 +430,31 @@ def catch(error: BaseException, logger: logging.Logger) -> int:
         int: 1 if the error was critical and 0 if not.
     """
     if isinstance(error, PrawErrors.Critical):
-        logger.critical(
-            "Critical error ocurred: %s : %s" % (type(error).__name__, error)
-        )
         time.sleep(60)
+        return (
+            0,
+            logger.critical,
+            "Critical error ocurred: %s : %s" % (type(error).__name__, error),
+        )
     elif isinstance(error, PrawErrors.NonCritical):
-        logger.warning("Reddit API is down: %s : %s" % (type(error).__name__, error))
         time.sleep(120)
+        return (
+            0,
+            logger.warning,
+            "Reddit API is down: %s : %s" % (type(error).__name__, error),
+        )
     elif isinstance(error, PrawErrors.SysExit):
-        logger.critical(
-            "An exception went unhandled: %s : %s" % (type(error).__name__, error)
+        return (
+            1,
+            logger.critical,
+            "An exception went unhandled: %s : %s" % (type(error).__name__, error),
         )
-        return 1
     else:
-        logger.critical(
-            "Something went very wrong: %s : %s" % (type(error).__name__, error)
+        return (
+            1,
+            logger.critical,
+            "Something went very wrong: %s : %s" % (type(error).__name__, error),
         )
-        return 1
-    return 0
 
 
 def _as_dict(obj: object):
@@ -442,11 +473,14 @@ def control_ratelimit(reddit: praw.reddit.Reddit):
     requests_left = (
         int(limit["remaining"]) if isinstance(limit["remaining"], (int, float)) else 0
     )
-    time_left = (
-        limit["reset_timestamp"]
-        if isinstance(limit["reset_timestamp"], (int, float))
-        else 0
-    ) - time.time()
+    time_left = abs(
+        (
+            limit["reset_timestamp"]
+            if isinstance(limit["reset_timestamp"], (int, float))
+            else 0
+        )
+        - time.time()
+    )
 
     if _logger.level == logging.DEBUG:
         curframe = inspect.currentframe()
@@ -498,3 +532,15 @@ def raw_str_comp(str1: object, str2: object) -> bool:
         bool: True if the strings are equal, False otherwise.
     """
     return str(str1).lower() == str(str2).lower()
+
+
+def dict_overwrite(d1, d2):
+    # XXX: here be dragons
+    return {
+        k: (d1[k] if k in d1 else d2[k])
+        if k not in d1 or k not in d2
+        else dict_overwrite(d1[k], d2[k])
+        if isinstance(d1[k], dict)
+        else d2[k]
+        for k in list(d1.keys()) + list(d2.keys())
+    }

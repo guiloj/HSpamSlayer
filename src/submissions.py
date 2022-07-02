@@ -2,7 +2,6 @@
 # ======== IMPORTS ======== #
 #############################
 
-import os
 import pickle
 import time
 from pathlib import Path as p
@@ -20,8 +19,7 @@ from _threading_manager import BanQueue, Queue, ThreadManager, uuid
 ###########################
 
 
-ABSPATH = os.path.abspath(__file__)
-ABSDIR = p(os.path.dirname(ABSPATH))
+ABSDIR = p(__file__).parent.absolute()
 ban_cache_path = ABSDIR.joinpath("../cache/ban.queue")
 
 ###############################
@@ -56,7 +54,7 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str):
         subreddit (praw.models.Subreddit): The subreddit to ban a user from.
         user_name (str): The reddit username of the user to ban.
     """
-    options = configs.get("on_bad_post", "ban_opts").unwrap()
+    options = configs.get_both("on_bad_post", "ban_opts").unwrap()
 
     options["ban_message"] = options["ban_message"] % {"subreddit": subreddit}
 
@@ -107,7 +105,7 @@ def remove_submission(submission: praw.models.Submission):
     Args:
         submission (praw.models.Submission): The submission to remove.
     """
-    options = configs.get("on_bad_post").unwrap()
+    options = configs.get_both("on_bad_post").unwrap()
 
     if not options["remove"]:
         return
@@ -152,12 +150,15 @@ def check_submissions(  # sourcery no-metrics
             )
 
             for submission in submission_stream:
-                time.sleep(20)
+
                 std.control_ratelimit(reddit)
+                time.sleep(20)
 
                 if submission is None:
-                    time.sleep(20)
+                    time.sleep(60)
                     continue
+
+                logger.debug("%s: found submission : %s" % (id_, submission))
 
                 if hasattr(submission, "crosspost_parent"):
 
@@ -166,10 +167,12 @@ def check_submissions(  # sourcery no-metrics
                     )
 
                     if str(parent.subreddit).lower() in blacklist.get():
-                        logger.debug(
-                            "Bad submission found: %s : u/%s",
-                            submission,
-                            submission.author,
+                        logger.info(
+                            "Bad submission found: %s : u/%s"
+                            % (
+                                submission,
+                                submission.author,
+                            )
                         )
 
                         if std.raw_str_comp(submission.author, parent.author):
@@ -191,7 +194,10 @@ def check_submissions(  # sourcery no-metrics
                     break
 
         except BaseException as e:
-            if std.catch(e, logger):
+            code, call, msg = std.catch(e, logger)
+            call(msg)
+
+            if code:
                 errors.put(e)
                 break
             continue

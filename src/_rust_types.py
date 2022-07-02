@@ -36,8 +36,8 @@ class __Result(t.Generic[T]):
         result: t.Union[T, t.Type[NONE]],
         error: t.Union[BaseException, t.Type[NONE]],
     ):
-        self.__result = result
-        self.__error = error
+        self._result = result
+        self._error = error
 
     def unwrap(self):
         """Unwrap the result. If the result is NONE panic."""
@@ -66,10 +66,10 @@ class Ok(__Result[T]):
         super().__init__(result, NONE)
 
     def unwrap(self) -> T:
-        return self.__result  # type: ignore - I know it will not be NONE for sure
+        return self._result  # type: ignore - I know it will not be NONE for sure
 
     def expect(self, _: str) -> T:
-        return self.__result  # type: ignore - I know it will not be NONE for sure
+        return self._result  # type: ignore - I know it will not be NONE for sure
 
     def is_err(self):
         return False
@@ -100,7 +100,7 @@ class Err(__Result[t.Type[NONE]]):
 
     @property
     def err(self) -> BaseException:
-        return self.__error  # type: ignore - I know it will be an error for sure
+        return self._error  # type: ignore - I know it will be an error for sure
 
 
 ###########################
@@ -108,13 +108,13 @@ class Err(__Result[t.Type[NONE]]):
 
 class __Option(t.Generic[T]):
     def __init__(self, value: T):
-        self.__value = value
+        self._value = value
 
     def unwrap(self) -> T:
         """Unwrap the option. If the option is NONE panic."""
         ...
 
-    def unwrap_or_default(self, _: T):
+    def unwrap_or(self, _: T):
         """Unwrap the option. If the option is NONE return a default value."""
         ...
 
@@ -125,17 +125,17 @@ class __Option(t.Generic[T]):
 
 class Some(__Option[T]):
     def __init__(self, value: T):
-        assert type(T) != NONE, "Some() type can't be NONE"
         super().__init__(value)
+        assert type(T) != NONE, "Some() type can't be NONE"
 
     def unwrap(self) -> T:
-        return self.__value
+        return self._value
 
-    def unwrap_or_default(self, _: T) -> T:
-        return self.__value
+    def unwrap_or(self, _: T) -> T:
+        return self._value
 
     def expect(self, _: str) -> T:
-        return self.__value
+        return self._value
 
 
 class Nothing(__Option[t.Type[NONE]]):
@@ -145,7 +145,7 @@ class Nothing(__Option[t.Type[NONE]]):
     def unwrap(self) -> t.NoReturn:
         panic(ExpectedValue("Value expected, got NONE."))
 
-    def unwrap_or_default(self, default: T) -> T:
+    def unwrap_or(self, default: T) -> T:
         return default
 
     def expect(self, msg: str) -> t.NoReturn:

@@ -164,7 +164,7 @@ class CompImageHash:
 
         logger.critical(
             f"failed to load thumb from {other!r}: {other_thumb.err}"
-        )  # XXX: !r calls repr()
+        )  # ?: !r calls repr()
         return []
 
 
@@ -289,17 +289,15 @@ def get_images_from_submission(submission: Submission) -> "List[bytes]":
         List[bytes]: List of all image's byte data.
     """
     result = []
-    if submission.is_self:
-        return result  # text submission
 
-    elif hasattr(submission, "is_gallery"):
+    if hasattr(submission, "is_gallery"):
         for value in submission.media_metadata.values():
 
             url = value["s"]["u"].split("?")[0].replace("preview", "i")
 
             _request(url, result)
-
-    else:
+    # FIXME: maybe a text/image post has a different post_hint
+    elif getattr(submission, "post_hint", None) in ("image", "link"):
         _request(submission.url, result)
 
     return result

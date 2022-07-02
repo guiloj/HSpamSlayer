@@ -2,7 +2,6 @@
 # ======== IMPORTS ======== #
 #############################
 
-import os
 import sys
 import time
 from pathlib import Path as p
@@ -16,8 +15,7 @@ from _plugin_loader import PluginLoader
 ############################
 
 
-ABSPATH = os.path.abspath(__file__)
-ABSDIR = p(os.path.dirname(ABSPATH))
+ABSDIR = p(__file__).parent.absolute()
 
 
 ###############################

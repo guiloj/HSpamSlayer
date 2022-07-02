@@ -73,17 +73,21 @@ CONFIG_SCHEMA = {
                 "remove_opts": {
                     "type": "object",
                     "additionalProperties": False,
-                    "properties": {"spam": {"type": "boolean"}},
-                    "required": ["spam"],
+                    "properties": {
+                        "spam": {"type": "boolean"},
+                        "mod_note": {"type": "string"},
+                        "reason_id": {"type": "string"},
+                    },
                 },
                 "remove_message_content": {
                     "type": "object",
                     "additionalProperties": False,
                     "properties": {
+                        "title": {"type": "string"},
                         "message": {"type": "string"},
                         "type": {"type": "string"},
                     },
-                    "required": ["message", "type"],
+                    "required": ["message", "type", "title"],
                 },
                 "ban": {"type": "boolean"},
                 "ban_opts": {
@@ -92,7 +96,7 @@ CONFIG_SCHEMA = {
                     "properties": {
                         "ban_message": {"type": "string"},
                         "ban_reason": {"type": "string"},
-                        "duration": {"type": "null"},
+                        "duration": {"type": ["integer", "null"]},
                         "note": {"type": "string"},
                     },
                     "required": ["ban_message", "ban_reason", "duration", "note"],
@@ -132,12 +136,17 @@ CONFIG_SCHEMA = {
                 "required": ["types", "script"],
             },
         },
-        "experimental": {
+        "extra": {
             "type": "object",
             "additionalProperties": False,
+            "required": ["opt_in_image_recognition", "opt_out_manual_moderation"],
             "properties": {
-                "opt_in": {"type": "boolean"},
-                "image_recognition": {"type": "boolean"},
+                "opt_in_image_recognition": {
+                    "type": "boolean",
+                },
+                "opt_out_manual_moderation": {
+                    "type": "boolean",
+                },
             },
         },
     },
@@ -148,10 +157,83 @@ CONFIG_SCHEMA = {
         "on_bad_post",
         "main.py",
         "plugins",
+        "extra",
     ],
 }
 
-SUB_CONFIG_SCHEMA = {}
+SUB_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["on_bad_post", "extra"],
+    "properties": {
+        "on_bad_post": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["remove_opts", "remove_message_content", "ban_opts"],
+            "properties": {
+                "remove_opts": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["spam", "mod_note"],
+                    "properties": {
+                        "spam": {
+                            "type": "boolean",
+                        },
+                        "mod_note": {
+                            "type": "string",
+                        },
+                    },
+                },
+                "remove_message_content": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": ["public", "private", "private_exposed"],
+                        },
+                    },
+                },
+                "ban_opts": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["ban_reason", "duration", "note"],
+                    "properties": {
+                        "ban_reason": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": 100,
+                        },
+                        "duration": {
+                            "type": ["integer", "null"],
+                            "minimum": 1,
+                            "maximum": 999,
+                        },
+                        "note": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": 300,
+                        },
+                    },
+                },
+            },
+        },
+        "extra": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["opt_in_image_recognition", "opt_out_manual_moderation"],
+            "properties": {
+                "opt_in_image_recognition": {
+                    "type": "boolean",
+                },
+                "opt_out_manual_moderation": {
+                    "type": "boolean",
+                },
+            },
+        },
+    },
+}
 
 BANNED_SCHEMA = {
     "type": "object",
@@ -176,7 +258,9 @@ ANY_SCHEMA = {}
 ###############################
 
 
-def validate(instance: object, schema: Any) -> "BaseException | None":
+def validate(
+    instance: object, schema: Any
+) -> "jsonschema.exceptions.ValidationError | None":
     """Validate json object with a schema.
 
     Args:

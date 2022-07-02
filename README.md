@@ -16,8 +16,8 @@ A simple bot to help keep spam away from your _H_ subreddit.
 # Table of contents
 
 -   [[About](#about)] - Information about the bot
--   [[Setup](#setup)] - Invite the bot to mod your subreddit
--   [[Installation](#installation)] - Install and modify your version of the bot ([GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.txt))
+-   [[Setup](#setup)] - Invite the bot to mod your subreddit (for the user)
+-   [[Installation](#installation)] - Install and modify your version of the bot (for the developer)
 -   [[Docs](./doc/)] - **RTFM!**
 -   [[TODO](./TODO.md)] - Todo list for new features
 
@@ -28,6 +28,8 @@ HSpamSlayer is a bot that is programmed to stream posts from modded subreddits a
 It was made to handle the current crosspost spam in many subreddits where a bot would get a random post from sub _A_ and submit it to its own subreddit with the same title and then crosspost it back to sub _A_.
 
 To stop this HSpamSlayer has a blacklist of carefully selected subreddits to ban authors from, if you want to make a suggestion you can! just head to [the issues tab](https://github.com/guiloj/HSpamSlayer/issues) and select subreddit proposal when creating a new issue.
+
+Consider supporting the developer by [buying me a coffee!](https://www.buymeacoffee.com/guiloj)
 
 # Setup
 

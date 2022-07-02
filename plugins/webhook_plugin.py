@@ -3,7 +3,6 @@
 #############################
 
 import json
-import os
 import sys
 from pathlib import Path as p
 from typing import Dict
@@ -15,14 +14,13 @@ import requests
 ###########################
 
 
-ABSPATH = os.path.abspath(__file__)
-ABSDIR = p(os.path.dirname(ABSPATH))
+ABSDIR = p(__file__).parent.absolute()
 
 sys.path.append(str(ABSDIR.joinpath("../src")))
 
-##############################
-# ======== INSTACES ======== #
-##############################
+###############################
+# ======== INSTANCES ======== #
+###############################
 
 import _stdlib as std
 

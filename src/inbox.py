@@ -2,7 +2,6 @@
 # ======== IMPORTS ======== #
 #############################
 
-import os
 import time
 from pathlib import Path as p
 
@@ -11,7 +10,9 @@ import praw.exceptions
 import praw.models
 import prawcore
 
+import _rust_types as rt
 import _stdlib as std
+import _sub_configs as sconf
 from _plugin_loader import PluginLoader
 
 ############################
@@ -19,8 +20,7 @@ from _plugin_loader import PluginLoader
 ############################
 
 
-ABSPATH = os.path.abspath(__file__)
-ABSDIR = p(os.path.dirname(ABSPATH))
+ABSDIR = p(__file__).parent.absolute()
 
 
 ###############################
@@ -105,52 +105,104 @@ def make_sticky_announcement(subreddit: praw.models.Subreddit) -> None:
         logger.error("Making announcement to r/%s failed: %s" % (subreddit, e))
 
 
+def reply_to(message: praw.models.ModmailConversation, body: str) -> int:
+    """Reply to a subreddit message, return 1 if anything went wrong.
+
+    Args:
+        message (praw.models.SubredditMessage): Message to reply to.
+        body (str): Reply body.
+
+    Returns:
+        int: Exit code like.
+    """
+    try:
+        message.reply(body=body)
+        return 0
+    except prawcore.exceptions.Forbidden as e:
+        logger.critical(
+            "Replying to %s from r/%s failed: %s" % (message, message.subreddit, e)
+        )
+        return 1
+
+
 def check_inbox(reddit: praw.reddit.Reddit) -> None:
+    # sourcery skip: low-code-quality, merge-nested-ifs
     """Check for messages in the bot's inbox.
 
     Args:
         reddit (praw.reddit.Reddit)
     """
 
-    inbox = reddit.inbox.unread(limit=None)  # type: ignore
+    discussions = reddit.subreddit("all").mod.stream.modmail_conversations(
+        state="mod", skip_existing=True, pause_after=-1
+    )
 
-    for unread in inbox:
-        std.control_ratelimit(reddit)
+    while 1:
 
-        if isinstance(unread, praw.models.SubredditMessage):
+        for unread in reddit.inbox.unread(limit=None):
+            std.control_ratelimit(reddit)
 
-            if str(unread.subreddit).lower() in (
-                [
-                    x.lower()
-                    for x in configs.get("on_invite", "ignore").unwrap_or_default([])
-                ]
-                + blacklist.get()
-            ):
-                continue
+            if isinstance(unread, praw.models.SubredditMessage):
 
-            try:
-                # https://praw.readthedocs.io/en/stable/code_overview/other/subredditmoderation.html?highlight=accept_invite#praw.models.reddit.subreddit.SubredditModeration.accept_invite
-                reddit.subreddit(str(unread.subreddit)).mod.accept_invite()
+                if str(unread.subreddit).lower() not in (
+                    [
+                        x.lower()
+                        for x in configs.get("on_invite", "ignore").unwrap_or([])
+                    ]
+                    + blacklist.get()
+                ):
+                    try:
+                        # https://praw.readthedocs.io/en/stable/code_overview/other/subredditmoderation.html?highlight=accept_invite#praw.models.reddit.subreddit.SubredditModeration.accept_invite
+                        reddit.subreddit(str(unread.subreddit)).mod.accept_invite()
 
-                plugins.on("on_invite", subreddit=str(unread.subreddit))
+                        plugins.on("on_invite", subreddit=str(unread.subreddit))
 
-                time.sleep(1)  # sleep just to be 100% sure <- probably stupid
+                        time.sleep(1)  # sleep just to be 100% sure <- probably stupid
 
-                send_message_to_subreddit(unread.subreddit)
-                make_sticky_announcement(unread.subreddit)
-            except (
-                praw.exceptions.RedditAPIException,
-                prawcore.exceptions.NotFound,
-            ) as e:
-                logger.warning(
-                    "Accepting invite from r/%s failed: %s" % (unread.subreddit, e)
-                )
+                        send_message_to_subreddit(unread.subreddit)
+                        make_sticky_announcement(unread.subreddit)
+                    except (
+                        praw.exceptions.RedditAPIException,
+                        prawcore.exceptions.NotFound,
+                    ) as e:
+                        logger.warning(
+                            "Accepting invite from r/%s failed: %s"
+                            % (unread.subreddit, e)
+                        )
 
-        unread.mark_read()
+            unread.mark_read()
 
-    moderating.update(reddit)
-    plugins.check()
-    time.sleep(120)
+        for discussion in discussions:
+            if discussion is None:
+                break
+
+            if isinstance(discussion, praw.models.ModmailConversation):
+                if str(discussion.subject).lower().strip() == "set config":
+
+                    if not isinstance(discussion.owner, praw.models.Subreddit):
+                        reply_to(
+                            discussion,
+                            "It seems like you have sent this message from your account instead of from a subreddit, please try again!",
+                        )
+                    elif not discussion.is_internal:
+                        reply_to(
+                            discussion,
+                            "It seems like you're not part of our sub network yet! Please send the bot an invite and wait until you receive a confirmation message.",
+                        )
+                    else:
+                        err = sconf.set_sub_config(
+                            str(discussion.messages[0].body_markdown),
+                            str(discussion.owner),
+                        )
+
+                        if isinstance(err, rt.Some):
+                            reply_to(discussion, err.unwrap())
+                        else:
+                            reply_to(discussion, "Your sub configs are now set!")
+
+        moderating.update(reddit)
+        plugins.check()
+        time.sleep(120)
 
 
 ##########################
@@ -175,7 +227,9 @@ def main():
         except KeyboardInterrupt:
             break
         except BaseException as e:
-            if std.catch(e, logger):
+            code, call, msg = std.catch(e, logger)
+            call(msg)
+            if code:
                 error = e
                 break
             continue
