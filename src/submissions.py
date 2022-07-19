@@ -54,7 +54,7 @@ def ban_user(subreddit: praw.models.Subreddit, user_name: str):
         subreddit (praw.models.Subreddit): The subreddit to ban a user from.
         user_name (str): The reddit username of the user to ban.
     """
-    options = configs.get_both("on_bad_post", "ban_opts").unwrap()
+    options = configs.get_both("on_bad_post", "ban_opts", sub=str(subreddit)).unwrap()
 
     options["ban_message"] = options["ban_message"] % {"subreddit": subreddit}
 
@@ -105,7 +105,7 @@ def remove_submission(submission: praw.models.Submission):
     Args:
         submission (praw.models.Submission): The submission to remove.
     """
-    options = configs.get_both("on_bad_post").unwrap()
+    options = configs.get_both("on_bad_post", sub=str(submission.subreddit)).unwrap()
 
     if not options["remove"]:
         return

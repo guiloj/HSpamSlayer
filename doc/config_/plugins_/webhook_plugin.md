@@ -9,7 +9,8 @@ _(built for discord webhooks)_
     {
         "types": [
             "on_invite",
-            "on_main_critical"
+            "on_main_critical",
+            "on_remove",
         ],
         "script": "webhook_plugin.py"
     }
@@ -23,7 +24,8 @@ _(built for discord webhooks)_
     "webhook": "",
     "messages": {
         "on_invite": {},
-        "on_main_critical": {}
+        "on_main_critical": {},
+        "on_remove": {}
     }
 }
 ```
@@ -37,7 +39,8 @@ The **discord** webhook url.
 ```json
 "messages": {
     "on_invite": {},
-    "main_critical": {}
+    "main_critical": {},
+    "on_remove": {}
 }
 ```
 

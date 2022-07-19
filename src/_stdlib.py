@@ -116,7 +116,7 @@ class Configs:
         """Gets a config value from the config file."""
         return self._get(self.config_path, *keys)
 
-    def get_sub(self, sub: str, *keys):
+    def get_sub(self, *keys, sub: str):
         """Gets a config value from a sub specific config file.
 
         Args:
@@ -126,21 +126,23 @@ class Configs:
             Any: Config value. Defaults to normal config file.
         """
         config_path = self.config_path
+        schema = val.CONFIG_SCHEMA
 
         for config in self.subs_path.iterdir():
             if raw_str_comp(config.name.replace(".json", ""), sub):
                 config_path = config
+                schema = val.SUB_CONFIG_SCHEMA
                 break
 
         try:
-            return self._get(config_path, *keys, val.SUB_CONFIG_SCHEMA)
+            return self._get(config_path, *keys, schema=schema)
         except Exception as e:
             logger.critical(
                 "Failed to validate configuration file for r/%s: %s" % (sub, e)
             )
             return self._get(self.config_path, *keys)
 
-    def get_both(self, sub: str, *keys) -> rt.Option[Any]:
+    def get_both(self, *keys, sub: str) -> rt.Option[Any]:
         """Gets a config value from a sub specific config file and completes it with the default config file.
 
         Args:
@@ -150,7 +152,7 @@ class Configs:
             Any: Config value. Defaults to normal config file.
         """
         normal_conf = self.get(*keys)
-        sub_conf = self.get_sub(sub, *keys)
+        sub_conf = self.get_sub(*keys, sub=sub)
 
         if isinstance(sub_conf, rt.Some) or isinstance(normal_conf, rt.Some):
             return rt.Some(dict_overwrite(normal_conf.unwrap(), sub_conf.unwrap()))

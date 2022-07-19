@@ -11,6 +11,7 @@ from queue import Queue
 from typing import Any, Callable, Dict, List, Tuple
 
 import _stdlib as std
+from _plugin_loader import PluginLoader
 
 ############################
 # ======== PATHS ========= #
@@ -28,6 +29,7 @@ _configs = std.Configs()
 _logger = std.Logger(
     ABSDIR.joinpath("../logs/threading.manager.log"), "ThreadingManager"
 )
+_plugins = PluginLoader(["on_remove"])
 
 #############################
 # ======== CLASSES ======== #
@@ -115,6 +117,10 @@ class ThreadManager:
 
         if len(difference[0]):  # stopped modding.
             _logger.info(f"Stopped modding: {difference[0]}")
+
+            for sub in difference[0]:
+                _plugins.on("on_remove", subreddit=sub)
+
             for thread in self.running:
                 for sub in difference[0]:
                     if sub in self.thread_dict[thread.id]:

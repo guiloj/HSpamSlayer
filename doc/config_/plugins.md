@@ -27,6 +27,7 @@ TYPES
 
 -   `"on_invite"` - Fired when bot receives an invite.
 -   `"on_main_critical"` - Fired when [main.py](../../src/main.py) detects that one of the scripts has halted.
+-   `"on_remove"` - Fired when the bot is removed from a sub's moderators.
 -   _more coming soon_
 
 ### **"script"**
